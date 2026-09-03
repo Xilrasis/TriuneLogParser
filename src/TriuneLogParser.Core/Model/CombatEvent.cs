@@ -24,6 +24,9 @@ public sealed class CombatEvent
     /// </summary>
     public string? AttackerOwner { get; set; }
 
+    /// <summary>Owner of <see cref="Target"/> when the target is a pet. Filled by the encounter builder.</summary>
+    public string? TargetOwner { get; set; }
+
     /// <summary>Damage or heal amount. 0 for misses and (usually) deaths.</summary>
     public long Amount { get; init; }
 

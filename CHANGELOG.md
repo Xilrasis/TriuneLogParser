@@ -33,6 +33,12 @@ feature-scoped; newest first. Format loosely follows
   - **Export** a selected encounter (or range) to CSV or JSON.
   - `triuneparse --table` now prints a per-mob summary.
 
+### Fixed
+- Swarm / temporary pets (`Player`s Animated Corpse hits …`) are now parsed and
+  credited to the owning player instead of being dropped as unknown NPCs. Damage the
+  pet takes folds into the owner too, and a swarm pet expiring no longer counts as a
+  player death.
+
 ### Known issues
 - Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned
   (a `TextAlignment="Right"` rendering bug on some Windows 11 builds).

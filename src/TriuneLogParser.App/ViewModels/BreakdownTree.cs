@@ -183,7 +183,7 @@ public static class BreakdownTreeBuilder
             long petTotal = items.Sum(b => b.Total);
             var petNode = new BreakdownNode
             {
-                Label = pet.Key,
+                Label = StripOwnerPrefix(pet.Key),
                 Sub = "pet",
                 Depth = 1,
                 Kind = "group",
@@ -248,6 +248,13 @@ public static class BreakdownTreeBuilder
     // Only auto-attack "white" melee collapses into the Melee group. Skill attacks
     // (kick, strike, backstab, frenzy, bash, punch) stay as their own lines.
     private static bool IsMelee(SourceBucket b) => b.Category == "Melee";
+
+    /// <summary>"Gnomies`s Animated Corpse" → "Animated Corpse" for a tidier pet label.</summary>
+    private static string StripOwnerPrefix(string name)
+    {
+        int tick = name.IndexOf("`s ", StringComparison.Ordinal);
+        return tick > 0 && tick < 20 ? name[(tick + 3)..] : name;
+    }
 
     private static long SumAll(IReadOnlyList<FighterStats> fighters, Func<FighterStats, long> val) =>
         fighters.Sum(val);

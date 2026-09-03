@@ -71,6 +71,24 @@ public class Phase4Tests
     }
 
     [Fact]
+    public void Swarm_pet_damage_folds_into_owner()
+    {
+        var enc = Build(new[]
+        {
+            L("12:00:00", "Gnomies pierces a doomfire soldier for 500 points of damage."),
+            L("12:00:01", "Gnomies`s Servant of Ro hits a doomfire soldier for 200 points of damage."),
+            L("12:00:02", "Gnomies`s Host of the Elements hits a doomfire soldier for 150 points of damage."),
+            L("12:00:03", "a doomfire soldier has been slain by Gnomies!"),
+        }, out _);
+
+        EncounterReport r = EncounterAggregator.Report(enc);
+        FighterStats g = Assert.Single(r.DamageDone, f => f.Name == "Gnomies");
+        Assert.Equal(850, g.DamageDone);
+        Assert.Contains("Gnomies`s Servant of Ro", g.Pets);
+        Assert.DoesNotContain(r.DamageDone, f => f.Name.Contains("Servant of Ro"));
+    }
+
+    [Fact]
     public void Class_tracker_infers_from_signature_abilities()
     {
         Build(new[]

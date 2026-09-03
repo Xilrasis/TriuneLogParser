@@ -141,6 +141,8 @@ public sealed class EncounterBuilder
         // owner in from the registry so aggregation folds them into the owner.
         if (e.AttackerOwner == null && e.AttackerKind == EntityKind.Pet && e.Attacker != null)
             e.AttackerOwner = _roster.OwnerOf(e.Attacker);
+        if (e.TargetOwner == null && e.TargetKind == EntityKind.Pet && e.Target != null)
+            e.TargetOwner = _roster.OwnerOf(e.Target);
 
         switch (e.Action)
         {
@@ -220,7 +222,7 @@ public sealed class EncounterBuilder
                 Close(EncounterEndReason.AllMobsDead, e.Timestamp);
             }
         }
-        else if (e.TargetKind is EntityKind.Player or EntityKind.Pet && e.Target is { } who)
+        else if (e.TargetKind == EntityKind.Player && e.Target is { } who)
         {
             _current.PlayerDeaths.Add(who);
         }

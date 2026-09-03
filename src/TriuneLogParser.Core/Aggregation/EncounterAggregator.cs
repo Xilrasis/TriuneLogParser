@@ -202,7 +202,8 @@ public static class EncounterAggregator
 
     private static void ApplyDeath(CombatEvent e, Func<string, FighterStats> get)
     {
-        if (e.Target is { } who && e.TargetKind is EntityKind.Player or EntityKind.Pet)
+        // Only real player deaths count — swarm/temp pets "die" when they expire.
+        if (e.Target is { } who && e.TargetKind == EntityKind.Player)
             get(who).Deaths++;
     }
 
@@ -210,7 +211,7 @@ public static class EncounterAggregator
     private static (string fighter, string? petName) ResolveFighter(
         string actor, CombatEvent e, bool useOwnerOfTarget = false)
     {
-        string? owner = useOwnerOfTarget ? null : e.AttackerOwner;
+        string? owner = useOwnerOfTarget ? e.TargetOwner : e.AttackerOwner;
 
         bool actorIsPet = useOwnerOfTarget
             ? e.TargetKind == EntityKind.Pet

@@ -108,6 +108,28 @@ public class ParserTests
     }
 
     [Fact]
+    public void Swarm_pet_melee_attributed_to_owner()
+    {
+        var (parser, e) = ParseOne("Gnomies`s Animated Corpse hits a magma rocklord for 392 points of damage.");
+        Assert.Equal(CombatAction.Damage, e.Action);
+        Assert.Equal("Gnomies`s Animated Corpse", e.Attacker);
+        Assert.Equal("Gnomies", e.AttackerOwner);
+        Assert.Equal("a magma rocklord", e.Target);
+        Assert.Equal(392, e.Amount);
+        Assert.Equal(DamageMechanic.Melee, e.Mechanic);
+        Assert.True(parser.Pets.IsPet("Gnomies`s Animated Corpse"));
+    }
+
+    [Fact]
+    public void Swarm_pet_multiword_name_and_non_melee()
+    {
+        var (_, e) = ParseOne("Gnomies`s Host of the Elements hits a doomfire soldier for 59 points of damage.");
+        Assert.Equal("Gnomies`s Host of the Elements", e.Attacker);
+        Assert.Equal("Gnomies", e.AttackerOwner);
+        Assert.Equal(59, e.Amount);
+    }
+
+    [Fact]
     public void Pet_owner_tag_on_heal()
     {
         var (_, e) = ParseOne("Karnalath (Owner: Gnomies) has healed Xilaria for 516 points of damage. (Hand of Retribution Recourse)");

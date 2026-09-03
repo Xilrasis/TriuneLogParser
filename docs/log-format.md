@@ -40,6 +40,19 @@ attributed to the owner too (retroactively within a session — see
 
 Pets with no owner ever established stay their own entity.
 
+**Swarm / temporary pets** are logged with a backtick possessive and no `(Owner:)`
+tag:
+
+```
+Gnomies`s Animated Corpse hits a magma rocklord for 392 points of damage.
+Gnomies`s Host of the Elements hits a doomfire soldier for 59 points of damage.
+Gnomies`s Servant of Ro hits a doomfire soldier for 2 points of damage.
+```
+
+`{Player}`s {swarm type} <verb> {target} for N points of [non-melee ]damage.` — the
+type becomes a pet owned by `{Player}` and its damage folds into that player as a
+`pet` sub-group. Swarm pets "dying" (expiry) is not counted as a player death.
+
 ## Recognized lines
 
 ### Zone

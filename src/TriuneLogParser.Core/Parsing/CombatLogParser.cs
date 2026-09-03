@@ -95,6 +95,30 @@ public sealed partial class CombatLogParser
             return Damage(line, attacker: "You", target: m.Groups["t"].Value,
                 amount: ParseAmount(m), DamageMechanic.NonMelee, verb: null, spell: m.Groups["sp"].Value, ownerHint);
 
+        // Swarm / temporary pets: "Gnomies`s Animated Corpse hits a magma rocklord for 392 points of damage."
+        if ((m = SwarmPetHitRegex().Match(msg)).Success)
+        {
+            string owner = m.Groups["owner"].Value;
+            string pet = $"{owner}`s {m.Groups["pet"].Value}";
+            _pets.RegisterOwnedPet(pet, owner);
+            bool nonMelee = m.Groups["nm"].Success;
+            string verb = Verbs.Normalize(m.Groups["verb"].Value);
+            return Damage(line, attacker: pet, target: m.Groups["t"].Value, amount: ParseAmount(m),
+                nonMelee ? DamageMechanic.NonMelee : Verbs.Classify(verb),
+                nonMelee ? null : verb,
+                spell: m.Groups["sp"].Success ? m.Groups["sp"].Value : null,
+                ownerHint: owner);
+        }
+
+        if ((m = SwarmPetMissRegex().Match(msg)).Success)
+        {
+            string owner = m.Groups["owner"].Value;
+            string pet = $"{owner}`s {m.Groups["pet"].Value}";
+            _pets.RegisterOwnedPet(pet, owner);
+            return MissOutcome(line, attacker: pet, target: m.Groups["t"].Value,
+                Verbs.Normalize(m.Groups["verb"].Value), m.Groups["reason"].Value);
+        }
+
         if ((m = DamageShieldRegex().Match(msg)).Success)
             return Damage(line, attacker: explicitAttacker, target: m.Groups["t"].Value,
                 amount: ParseAmount(m), DamageMechanic.DamageShield, verb: null, spell: null, ownerHint);
@@ -302,6 +326,12 @@ public sealed partial class CombatLogParser
 
     [GeneratedRegex(@"^(?<t>.+?) has taken (?<amt>\d+) damage from your (?<sp>.+?)\.$")]
     private static partial Regex DotFromYourRegex();
+
+    [GeneratedRegex(@"^(?<owner>[A-Z][A-Za-z`'-]+)`s (?<pet>[A-Z][A-Za-z '-]+?) (?<verb>hits?|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points of (?<nm>non-melee )?damage\.(?: \((?<sp>.+)\))?$")]
+    private static partial Regex SwarmPetHitRegex();
+
+    [GeneratedRegex(@"^(?<owner>[A-Z][A-Za-z`'-]+)`s (?<pet>[A-Z][A-Za-z '-]+?) tries to (?<verb>[a-z]+) (?<t>.+?), but (?<reason>[^!]+)!$")]
+    private static partial Regex SwarmPetMissRegex();
 
     [GeneratedRegex(@"^(?<t>.+?) was hit by non-melee for (?<amt>\d+) points of damage\.$")]
     private static partial Regex DamageShieldRegex();
