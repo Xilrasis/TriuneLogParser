@@ -1,26 +1,220 @@
 <Window x:Class="TriuneLogParser.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TriuneLogParser" Height="480" Width="760"
-        Background="#1e1f22">
-    <Grid Margin="24">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="TriuneLogParser"
-                       FontSize="30" FontWeight="Bold" Foreground="#e6e6e6"
-                       HorizontalAlignment="Center" />
-            <TextBlock Text="Project Triune EverQuest combat-log parser"
-                       FontSize="14" Foreground="#9aa0a6" Margin="0,6,0,0"
-                       HorizontalAlignment="Center" />
-            <Border Background="#2b2d31" CornerRadius="8" Padding="18" Margin="0,24,0,0">
-                <StackPanel>
-                    <TextBlock Foreground="#c8c8c8" TextWrapping="Wrap" MaxWidth="520"
-                               Text="Phase 1 (parsing engine + CLI) is in place. This desktop shell is a placeholder — the encounter browser and always-on-top overlay arrive in Phases 2 and 3." />
-                    <TextBlock Foreground="#9aa0a6" Margin="0,12,0,0" TextWrapping="Wrap" MaxWidth="520"
-                               Text="For now, parse a log from the command line:  triuneparse &lt;logfile&gt; --table" />
+        xmlns:vm="clr-namespace:TriuneLogParser.App.ViewModels"
+        Title="TriuneLogParser" Height="720" Width="1180"
+        Background="{StaticResource Bg}" MinWidth="900" MinHeight="500">
+
+    <Window.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding ReloadCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel>
+        <!-- top bar -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" Padding="12,9" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Character" Style="{StaticResource Dim}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox Width="220" ItemsSource="{Binding Characters}" SelectedItem="{Binding SelectedCharacter}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Display}" Foreground="{StaticResource Text}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Reload (F5)" Command="{Binding ReloadCommand}" Margin="8,0,0,0" />
                 </StackPanel>
+
+                <ToggleButton Grid.Column="1" Content="Follow live" IsChecked="{Binding AutoFollow}" Margin="16,0,0,0" />
+
+                <TextBlock Grid.Column="2" Text="{Binding ZoneText}" Style="{StaticResource Dim}"
+                           VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" />
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding EverQuestFolder}" Style="{StaticResource Dim}" VerticalAlignment="Center"
+                               MaxWidth="280" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                    <Button Content="Change folder…" Command="{Binding ChangeFolderCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- status bar -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" Padding="12,5" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusText}" Style="{StaticResource Dim}" />
+        </Border>
+
+        <!-- setup hint -->
+        <Border DockPanel.Dock="Top" Background="#3a2f1c" Padding="12,8" Visibility="{Binding NeedsSetup, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="⚠  Set your EverQuest folder to begin — the one that contains the 'logs' folder." VerticalAlignment="Center" />
+                <Button Content="Choose folder…" Command="{Binding ChangeFolderCommand}" Margin="12,0,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420" MinWidth="300" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- encounter list -->
+            <Border Background="{StaticResource Panel}" CornerRadius="6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Encounters  (Ctrl/Shift-click to group)" Style="{StaticResource Dim}" Margin="10,8" />
+                    <ListView x:Name="EncounterList" Background="Transparent" BorderThickness="0"
+                              ItemsSource="{Binding Encounters}" SelectionMode="Extended"
+                              SelectionChanged="EncounterList_SelectionChanged"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="5,1" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListViewItem">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="8,4">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource Panel2}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BarActive}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:EncounterRowViewModel}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding StatusGlyph}" Foreground="{StaticResource Good}" FontSize="11"
+                                                   Width="12" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding StartText}" Style="{StaticResource Dim}" VerticalAlignment="Center" />
+                                        <TextBlock Text="  ·  " Style="{StaticResource Dim}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding DurationText}" Style="{StaticResource Dim}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding DeathsText}" Foreground="{StaticResource Danger}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding TopText}" Style="{StaticResource Dim}" Margin="12,0,0,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </DockPanel>
             </Border>
-            <TextBlock x:Name="VersionText" Foreground="#6b7075" Margin="0,18,0,0"
-                       HorizontalAlignment="Center" />
-        </StackPanel>
-    </Grid>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- breakdown -->
+            <Border Grid.Column="2" Background="{StaticResource Panel}" CornerRadius="6">
+                <DockPanel Margin="12">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <ToggleButton Content="Damage done" Click="Metric_Click" Tag="DamageDone"
+                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageDone}" />
+                        <ToggleButton Content="Damage taken" Click="Metric_Click" Tag="DamageTaken" Margin="6,0,0,0"
+                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageTaken}" />
+                        <ToggleButton Content="Healing" Click="Metric_Click" Tag="Healing" Margin="6,0,0,0"
+                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Healing}" />
+                        <Button Content="Follow live fight" Command="{Binding FollowLiveCommand}" Margin="16,0,0,0" />
+                    </StackPanel>
+
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding BreakdownHeader}" Style="{StaticResource Dim}" Margin="2,0,0,8" />
+
+                    <ScrollViewer x:Name="BreakdownScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  SizeChanged="BreakdownScroll_SizeChanged">
+                        <ItemsControl ItemsSource="{Binding Nodes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:BreakdownNode}">
+                                    <Border Margin="0,1" MinHeight="30" Cursor="Hand" MouseLeftButtonUp="Node_Click"
+                                            HorizontalAlignment="Left" ClipToBounds="True"
+                                            Width="{Binding DataContext.BreakdownWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            Background="{StaticResource Panel2}">
+                                        <Grid>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding BarStar}" />
+                                                    <ColumnDefinition Width="{Binding RestStar}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{StaticResource Bar}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="top">
+                                                                    <Setter Property="Background" Value="{StaticResource BarActive}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Kind}" Value="leaf">
+                                                                    <Setter Property="Background" Value="#2c3d55" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+                                            </Grid>
+
+                                            <Grid Margin="10,4,14,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="16" />
+                                                    <ColumnDefinition Width="112" />
+                                                    <ColumnDefinition Width="52" />
+                                                    <ColumnDefinition Width="86" />
+                                                    <ColumnDefinition Width="248" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="{Binding Glyph}" Foreground="{StaticResource TextDim}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="{Binding Depth, Converter={StaticResource IndentMargin}}" />
+
+                                                <TextBlock Grid.Column="1" Text="{Binding ValueText}" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding ShareText}" FontFamily="Consolas" Style="{StaticResource Dim}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding RateText}" FontFamily="Consolas" Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+
+                                                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="FontWeight" Value="Normal" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Kind}" Value="top">
+                                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Kind}" Value="group">
+                                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Sub}" Style="{StaticResource Dim}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Column="5" Text="{Binding DetailText}" Style="{StaticResource Dim}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
 </Window>

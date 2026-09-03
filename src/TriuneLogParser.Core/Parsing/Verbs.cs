@@ -35,7 +35,8 @@ public static class Verbs
 
     private static readonly HashSet<string> SpecialBase = new(StringComparer.OrdinalIgnoreCase)
     {
-        "kick", "punch", "bash", "backstab", "frenzy", "strikethrough",
+        // Skill / discipline attacks — kept out of the "core melee" (auto-attack) group.
+        "kick", "punch", "bash", "backstab", "frenzy", "strike", "strikethrough",
     };
 
     /// <summary>Normalise "crushes" → "crush"; leave already-base or unknown verbs untouched (lower-cased).</summary>

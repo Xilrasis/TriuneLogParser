@@ -8,9 +8,16 @@ namespace TriuneLogParser.Core.Tests;
 
 public class EncounterTests
 {
-    private static IReadOnlyList<Encounter> Build(IEnumerable<string> lines, string character = "Xilaria", int idle = 45)
+    private static IReadOnlyList<Encounter> Build(
+        IEnumerable<string> lines, string character = "Xilaria",
+        int idle = 45, bool splitOnKill = true, int reengage = 12)
     {
-        var p = new CombatLogProcessor(character, new EncounterOptions { IdleTimeout = TimeSpan.FromSeconds(idle) });
+        var p = new CombatLogProcessor(character, new EncounterOptions
+        {
+            IdleTimeout = TimeSpan.FromSeconds(idle),
+            SplitOnAllMobsDead = splitOnKill,
+            ReengageWindow = TimeSpan.FromSeconds(reengage),
+        });
         int n = 0;
         foreach (string l in lines)
             p.AddLine(l, ++n);
@@ -20,7 +27,7 @@ public class EncounterTests
     private static string L(string hhmmss, string msg) => $"[Thu Sep 03 {hhmmss} 2026] {msg}";
 
     [Fact]
-    public void Single_mob_fight_closes_on_death()
+    public void Fight_closes_on_kill()
     {
         var enc = Build(new[]
         {
@@ -34,6 +41,50 @@ public class EncounterTests
         Assert.Equal(2, enc.Count);
         Assert.Equal(EncounterEndReason.AllMobsDead, enc[0].EndReason);
         Assert.Contains("doomfire soldier", enc[0].Title);
+    }
+
+    [Fact]
+    public void Rapid_chain_pulls_merge_into_one_encounter()
+    {
+        var enc = Build(new[]
+        {
+            L("12:00:00", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:03", "You have slain a doomfire soldier!"),
+            L("12:00:10", "You crush a doomfire guardian for 90 points of damage."),
+            L("12:00:13", "You have slain a doomfire guardian!"),
+        });
+
+        Assert.Single(enc);
+        Assert.Equal(2, enc[0].NpcsKilled.Count);
+    }
+
+    [Fact]
+    public void Pause_between_pulls_splits_them()
+    {
+        var enc = Build(new[]
+        {
+            L("12:00:00", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:03", "You have slain a doomfire soldier!"),
+            L("12:00:40", "You crush a doomfire guardian for 90 points of damage."),
+            L("12:00:43", "You have slain a doomfire guardian!"),
+        });
+
+        Assert.Equal(2, enc.Count);
+    }
+
+    [Fact]
+    public void Strict_per_pull_when_reengage_window_is_zero()
+    {
+        var enc = Build(new[]
+        {
+            L("12:00:00", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:03", "You have slain a doomfire soldier!"),
+            L("12:00:05", "You crush a doomfire guardian for 90 points of damage."),
+            L("12:00:07", "You have slain a doomfire guardian!"),
+        }, reengage: 0);
+
+        Assert.Equal(2, enc.Count);
+        Assert.Equal(EncounterEndReason.AllMobsDead, enc[0].EndReason);
     }
 
     [Fact]
@@ -76,9 +127,11 @@ public class EncounterTests
         var enc = Build(new[]
         {
             L("12:00:00", "You crush a doomfire soldier for 100 points of damage."),
-            L("12:00:02", "You crush a doomfire soldier for 100 points of damage."),
-            L("12:00:05", "You have entered the Bazaar."),
+            L("12:00:03", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:06", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:08", "You have entered the Bazaar."),
             L("12:00:20", "You crush a training dummy for 100 points of damage."),
+            L("12:00:24", "You crush a training dummy for 100 points of damage."),
         });
 
         Assert.Equal(2, enc.Count);

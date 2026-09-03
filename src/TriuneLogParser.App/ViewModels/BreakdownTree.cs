@@ -1,0 +1,200 @@
+using System.Collections.ObjectModel;
+using TriuneLogParser.Core.Aggregation;
+
+namespace TriuneLogParser.App.ViewModels;
+
+public enum Metric { DamageDone, DamageTaken, Healing }
+
+/// <summary>
+/// One row in the damage-meter breakdown. Rows form a tree (fighter → group → leaf);
+/// the view renders a flattened, expand-aware list of them.
+/// </summary>
+public sealed class BreakdownNode : ObservableObject
+{
+    private bool _isExpanded;
+
+    public required string Label { get; init; }
+    public string Sub { get; init; } = "";
+    public int Depth { get; init; }
+
+    public long Value { get; init; }
+    public string ValueText { get; init; } = "";
+    public string RateText { get; init; } = "";
+    public string ShareText { get; init; } = "";
+    public string DetailText { get; init; } = "";
+
+    /// <summary>0..1 width of the bar, relative to the biggest row at this level.</summary>
+    public double BarFraction { get; init; }
+
+    /// <summary>Bar colour role: "top" (fighter), "group", "leaf".</summary>
+    public string Kind { get; init; } = "leaf";
+
+    public List<BreakdownNode> Children { get; } = new();
+    public bool HasChildren => Children.Count > 0;
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set { if (Set(ref _isExpanded, value)) { Raise(nameof(Glyph)); ExpandedChanged?.Invoke(); } }
+    }
+
+    public string Glyph => HasChildren ? (IsExpanded ? "▾" : "▸") : "";
+    public double Indent => 12 + Depth * 16;
+
+    public event Action? ExpandedChanged;
+}
+
+public static class BreakdownTreeBuilder
+{
+    /// <summary>Build the fighter/group/leaf tree for one metric of a report.</summary>
+    public static List<BreakdownNode> Build(EncounterReport report, Metric metric, double seconds)
+    {
+        IReadOnlyList<FighterStats> fighters = metric switch
+        {
+            Metric.DamageDone => report.DamageDone,
+            Metric.DamageTaken => report.DamageTaken,
+            _ => report.Healing,
+        };
+
+        long Val(FighterStats f) => metric switch
+        {
+            Metric.DamageDone => f.DamageDone,
+            Metric.DamageTaken => f.DamageTaken,
+            _ => f.HealingDone,
+        };
+
+        IReadOnlyList<SourceBucket> Buckets(FighterStats f) => metric switch
+        {
+            Metric.DamageDone => f.DamageSources,
+            Metric.DamageTaken => f.DamageTakenSources,
+            _ => f.HealingSources,
+        };
+
+        long topValue = fighters.Count > 0 ? Val(fighters[0]) : 0;
+        var nodes = new List<BreakdownNode>();
+
+        foreach (FighterStats f in fighters)
+        {
+            long fv = Val(f);
+            if (fv <= 0)
+                continue;
+
+            var fighter = new BreakdownNode
+            {
+                Label = f.Name,
+                Sub = metric == Metric.DamageDone ? $"crit {f.CritRate:P0} · acc {f.Accuracy:P0}" : "",
+                Depth = 0,
+                Kind = "top",
+                Value = fv,
+                ValueText = fv.ToString("N0"),
+                RateText = seconds > 0 ? $"{fv / seconds:N0}/s" : "",
+                ShareText = topValue > 0 ? ((double)fv / SumAll(fighters, Val)).ToString("P0") : "",
+                DetailText = f.Deaths > 0 ? $"{f.Deaths} death(s)" : "",
+                BarFraction = topValue > 0 ? (double)fv / topValue : 0,
+            };
+
+            foreach (BreakdownNode child in BuildChildren(Buckets(f), fv))
+                fighter.Children.Add(child);
+
+            nodes.Add(fighter);
+        }
+
+        return nodes;
+    }
+
+    private static IEnumerable<BreakdownNode> BuildChildren(IReadOnlyList<SourceBucket> buckets, long fighterTotal)
+    {
+        // Split into: this fighter's own buckets vs. each pet's buckets.
+        var own = buckets.Where(b => b.PetName is null).ToList();
+        var byPet = buckets.Where(b => b.PetName is not null)
+            .GroupBy(b => b.PetName!, StringComparer.OrdinalIgnoreCase);
+
+        var groups = new List<(string label, string kindTag, List<SourceBucket> items)>();
+
+        // Melee (white + specials) collapse into one expandable group.
+        var melee = own.Where(IsMelee).ToList();
+        var nonMelee = own.Where(b => !IsMelee(b)).ToList();
+
+        var result = new List<BreakdownNode>();
+
+        if (melee.Count > 0)
+            result.Add(GroupNode("Melee", melee, fighterTotal, depth: 1));
+
+        foreach (SourceBucket b in nonMelee.OrderByDescending(b => b.Total))
+            result.Add(LeafNode(b.Name, b.Category, b, fighterTotal, depth: 1));
+
+        foreach (var pet in byPet)
+        {
+            var items = pet.ToList();
+            long petTotal = items.Sum(b => b.Total);
+            var petNode = new BreakdownNode
+            {
+                Label = pet.Key,
+                Sub = "pet",
+                Depth = 1,
+                Kind = "group",
+                Value = petTotal,
+                ValueText = petTotal.ToString("N0"),
+                ShareText = fighterTotal > 0 ? ((double)petTotal / fighterTotal).ToString("P0") : "",
+                DetailText = $"{items.Sum(b => b.Hits):N0} hits",
+                BarFraction = fighterTotal > 0 ? (double)petTotal / fighterTotal : 0,
+            };
+
+            var petMelee = items.Where(IsMelee).ToList();
+            var petOther = items.Where(b => !IsMelee(b)).ToList();
+            if (petMelee.Count > 0)
+                petNode.Children.Add(GroupNode("Melee", petMelee, petTotal, depth: 2));
+            foreach (SourceBucket b in petOther.OrderByDescending(b => b.Total))
+                petNode.Children.Add(LeafNode(b.Name, b.Category, b, petTotal, depth: 2));
+
+            result.Add(petNode);
+        }
+
+        return result.OrderByDescending(n => n.Value);
+    }
+
+    private static BreakdownNode GroupNode(string label, List<SourceBucket> items, long parentTotal, int depth)
+    {
+        long total = items.Sum(b => b.Total);
+        long hits = items.Sum(b => b.Hits);
+        long crits = items.Sum(b => b.Crits);
+        var node = new BreakdownNode
+        {
+            Label = label,
+            Depth = depth,
+            Kind = "group",
+            Value = total,
+            ValueText = total.ToString("N0"),
+            ShareText = parentTotal > 0 ? ((double)total / parentTotal).ToString("P0") : "",
+            DetailText = hits > 0 ? $"{hits:N0} hits · crit {(double)crits / hits:P0}" : "",
+            BarFraction = parentTotal > 0 ? (double)total / parentTotal : 0,
+        };
+
+        foreach (SourceBucket b in items.OrderByDescending(b => b.Total))
+            node.Children.Add(LeafNode(b.Name, b.Category, b, total, depth + 1));
+
+        return node;
+    }
+
+    private static BreakdownNode LeafNode(string label, string category, SourceBucket b, long parentTotal, int depth) => new()
+    {
+        Label = label,
+        Sub = category,
+        Depth = depth,
+        Kind = "leaf",
+        Value = b.Total,
+        ValueText = b.Total.ToString("N0"),
+        ShareText = parentTotal > 0 ? ((double)b.Total / parentTotal).ToString("P0") : "",
+        DetailText = b.Hits > 0
+            ? $"{b.Hits:N0} hits · avg {b.Average:N0} · max {b.Max:N0}" + (b.Crits > 0 ? $" · crit {b.CritRate:P0}" : "")
+            : "",
+        BarFraction = parentTotal > 0 ? (double)b.Total / parentTotal : 0,
+    };
+
+    // Only auto-attack "white" melee collapses into the Melee group. Skill attacks
+    // (kick, strike, backstab, frenzy, bash, punch) stay as their own lines.
+    private static bool IsMelee(SourceBucket b) => b.Category == "Melee";
+
+    private static long SumAll(IReadOnlyList<FighterStats> fighters, Func<FighterStats, long> val) =>
+        fighters.Sum(val);
+}

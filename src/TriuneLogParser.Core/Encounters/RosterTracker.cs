@@ -36,8 +36,12 @@ public sealed class RosterTracker
         {
             _kinds[pet] = EntityKind.Pet;
             MarkPlayer(owner);
+            PetOwnerLearned?.Invoke(pet, owner);
         };
     }
+
+    /// <summary>Re-raised from the pet registry when a pet's owner is first established.</summary>
+    public event Action<string /*pet*/, string /*owner*/>? PetOwnerLearned;
 
     public IReadOnlyCollection<string> VerifiedPlayers => _verifiedPlayers;
 

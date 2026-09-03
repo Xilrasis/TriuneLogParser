@@ -24,6 +24,9 @@ public sealed class LogFileTailer : IDisposable
 
     public string Path => _path;
 
+    /// <summary>Running 1-based count of lines emitted so far.</summary>
+    public int LineNumber => _lineNumber;
+
     /// <summary>Character name inferred from the file name (eqlog_&lt;Character&gt;_&lt;server&gt;.txt).</summary>
     public string? CharacterName => TryExtractCharacterName(_path);
 

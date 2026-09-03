@@ -5,8 +5,9 @@ A real-time EverQuest combat-log parser and damage meter for the
 running the RoF2 client whose log wording is different enough that mainstream parsers
 (EQLogParser, EQ Legends Companion) don't fully work with it.
 
-> **Status:** early development. Phase 1 (parsing engine + CLI) is in progress.
-> The WPF desktop app and overlay follow in later phases — see
+> **Status:** early development. Phases 1–2 are landing: the parsing engine, the
+> `triuneparse` CLI, and a WPF desktop app with a live encounter browser and
+> damage-meter breakdown. The always-on-top overlay is next — see
 > [the roadmap](#roadmap).
 
 ## Features
@@ -78,8 +79,8 @@ content it hasn't seen.
 
 | Phase | Scope |
 |---|---|
-| 1 | Parsing engine, encounter builder, aggregation, `triuneparse` CLI |
-| 2 | WPF app: first-run EQ-folder picker, live tail, encounter browser, breakdown grids |
+| 1 | ✅ Parsing engine, encounter builder, aggregation, `triuneparse` CLI |
+| 2 | ✅ WPF app: first-run EQ-folder picker, live tail, encounter browser, breakdown tree |
 | 3 | Always-on-top overlay with configurable damage-meter bars |
 | 4 | Class inference, encounter export, session history, per-mob views |
 

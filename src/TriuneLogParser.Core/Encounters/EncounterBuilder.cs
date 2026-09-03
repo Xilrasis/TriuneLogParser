@@ -8,14 +8,28 @@ public sealed class EncounterOptions
     /// <summary>Quiet time after which an open fight is closed. EQLogParser uses ~45 s.</summary>
     public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromSeconds(45);
 
-    /// <summary>
-    /// After the last known mob dies, keep the fight open this long so a follow-up
-    /// pull (adds already incoming) folds into the same encounter.
-    /// </summary>
-    public TimeSpan PostKillGrace { get; set; } = TimeSpan.FromSeconds(6);
+    /// <summary>Drop fights shorter than this that killed nothing (stray post-death DoT ticks, lone damage shields).</summary>
+    public TimeSpan MinDuration { get; set; } = TimeSpan.FromSeconds(3);
 
-    /// <summary>Ignore fights shorter than this with no kill (stray environmental ticks).</summary>
-    public TimeSpan MinDuration { get; set; } = TimeSpan.Zero;
+    /// <summary>
+    /// Hard cap on encounter length. A non-stop grind that never pauses long enough to
+    /// split is chopped into chapters of at most this long so the list stays useful.
+    /// </summary>
+    public TimeSpan MaxDuration { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// When true (default), a fight provisionally ends the moment every mob it has
+    /// touched is dead (EQLogParser "per-pull" style). When false, only a quiet gap of
+    /// <see cref="IdleTimeout"/> or a zone change ends it.
+    /// </summary>
+    public bool SplitOnAllMobsDead { get; set; } = true;
+
+    /// <summary>
+    /// If new combat starts within this long of a fight that ended on a kill (same zone),
+    /// it re-opens that fight instead of starting a new one — so a rapid chain-pull is
+    /// one encounter but a real pause splits. Set to zero for strict per-pull.
+    /// </summary>
+    public TimeSpan ReengageWindow { get; set; } = TimeSpan.FromSeconds(12);
 }
 
 /// <summary>
@@ -30,7 +44,6 @@ public sealed class EncounterBuilder
     private readonly RosterTracker _roster;
     private readonly List<Encounter> _completed = new();
     private Encounter? _current;
-    private DateTime? _pendingCloseAt;
     private int _nextId = 1;
     private string? _zone;
 
@@ -38,6 +51,26 @@ public sealed class EncounterBuilder
     {
         _roster = roster;
         _opt = options ?? new EncounterOptions();
+        _roster.PetOwnerLearned += RefoldOpenEncounter;
+    }
+
+    /// <summary>
+    /// When a pet's owner becomes known mid-fight, re-attribute its earlier events in
+    /// the still-open encounter so the live breakdown folds them into the owner.
+    /// </summary>
+    private void RefoldOpenEncounter(string pet, string owner)
+    {
+        if (_current == null)
+            return;
+
+        foreach (CombatEvent e in _current.Events)
+        {
+            if (e.AttackerOwner == null && string.Equals(e.Attacker, pet, StringComparison.OrdinalIgnoreCase))
+            {
+                e.AttackerKind = EntityKind.Pet;
+                e.AttackerOwner = owner;
+            }
+        }
     }
 
     public RosterTracker Roster => _roster;
@@ -89,14 +122,14 @@ public sealed class EncounterBuilder
         if (_current == null)
             return;
 
-        if (_pendingCloseAt is { } due && now >= due)
+        if (now - _current.LastActivity > _opt.IdleTimeout)
         {
-            Close(EncounterEndReason.AllMobsDead, _current.LastActivity);
+            Close(EncounterEndReason.Idle, _current.LastActivity);
             return;
         }
 
-        if (now - _current.LastActivity > _opt.IdleTimeout)
-            Close(EncounterEndReason.Idle, _current.LastActivity);
+        if (_opt.MaxDuration > TimeSpan.Zero && now - _current.Start >= _opt.MaxDuration)
+            Close(EncounterEndReason.TimeCap, now);
     }
 
     public void Handle(CombatEvent e)
@@ -147,10 +180,9 @@ public sealed class EncounterBuilder
         if (!isEngage)
             return;
 
-        _current ??= StartEncounter(e.Timestamp);
+        _current ??= ReopenRecent(e.Timestamp) ?? StartEncounter(e.Timestamp);
 
         string? npc = targetNpc ? e.Target : attackerNpc ? e.Attacker : null;
-        bool newMob = npc != null && !_current.NpcDamage.ContainsKey(npc);
 
         _current.Events.Add(e);
         _current.LastActivity = e.Timestamp;
@@ -166,9 +198,6 @@ public sealed class EncounterBuilder
                 _current.NpcDamage.TryAdd(npc, 0);
         }
 
-        // A fresh mob entering after a kill means the pull continues.
-        if (newMob && _pendingCloseAt != null)
-            _pendingCloseAt = null;
     }
 
     private void HandleDeath(CombatEvent e)
@@ -185,9 +214,11 @@ public sealed class EncounterBuilder
             _current.NpcsKilled.Add(mob);
             _current.NpcDamage.TryAdd(mob, 0);
 
-            bool allDead = _current.NpcDamage.Keys.All(_current.NpcsKilled.Contains);
-            if (allDead)
-                _pendingCloseAt = e.Timestamp + _opt.PostKillGrace;
+            if (_opt.SplitOnAllMobsDead &&
+                _current.NpcDamage.Keys.All(_current.NpcsKilled.Contains))
+            {
+                Close(EncounterEndReason.AllMobsDead, e.Timestamp);
+            }
         }
         else if (e.TargetKind is EntityKind.Player or EntityKind.Pet && e.Target is { } who)
         {
@@ -195,9 +226,28 @@ public sealed class EncounterBuilder
         }
     }
 
+    /// <summary>Re-open the most recent kill-closed fight if we re-engaged almost immediately.</summary>
+    private Encounter? ReopenRecent(DateTime now)
+    {
+        if (_opt.ReengageWindow <= TimeSpan.Zero || _completed.Count == 0)
+            return null;
+
+        Encounter last = _completed[^1];
+        if (last.EndReason != EncounterEndReason.AllMobsDead ||
+            last.Zone != _zone ||
+            now - last.End > _opt.ReengageWindow)
+        {
+            return null;
+        }
+
+        _completed.RemoveAt(_completed.Count - 1);
+        last.IsActive = true;
+        last.EndReason = EncounterEndReason.None;
+        return _current = last;
+    }
+
     private Encounter StartEncounter(DateTime start)
     {
-        _pendingCloseAt = null;
         return _current = new Encounter
         {
             Id = _nextId++,
@@ -221,7 +271,6 @@ public sealed class EncounterBuilder
 
         Encounter enc = _current;
         _current = null;
-        _pendingCloseAt = null;
 
         enc.End = end < enc.Start ? enc.Start : end;
         enc.IsActive = false;

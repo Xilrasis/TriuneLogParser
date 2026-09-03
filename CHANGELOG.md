@@ -8,6 +8,22 @@ feature-scoped; newest first. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **WPF desktop app (Phase 2).** First-run prompt for the EverQuest folder (persisted
+  to `%AppData%/TriuneLogParser/settings.json`), automatic discovery of character log
+  files, and a live tail that bulk-loads the existing log then follows new lines.
+- **Encounter browser.** Compact chronological list of encounters; select one — or
+  Ctrl/Shift-click several — to see a merged breakdown.
+- **Damage-meter breakdown.** Full-height proportional bars per fighter with the
+  numbers overlaid, expandable into a source tree: auto-attack swings collapse into a
+  single "Melee" line, each pet collapses into one line, and skill attacks
+  (kick, strike, backstab, frenzy, bash, punch) and spells stay separate — every row
+  shows its share of the parent. Damage-done / damage-taken / healing views.
+- Encounter splitting reworked: per-pull by default with a short re-engage window that
+  merges rapid chain-pulls, a 10-minute cap on non-stop grinds, and a session mode.
+
+### Known issues
+- Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned
+  (a `TextAlignment="Right"` rendering bug on some Windows 11 builds).
 - Project scaffold: solution, `Core` parsing library, `triuneparse` CLI, xUnit test
   project, CI + release GitHub Actions workflows.
 - Rule-driven log parser for the Project Triune log grammar: self/other melee hits and

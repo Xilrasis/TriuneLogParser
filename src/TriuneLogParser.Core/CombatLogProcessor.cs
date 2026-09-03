@@ -85,6 +85,20 @@ public sealed class CombatLogProcessor
     /// <summary>Streaming only: close fights that have gone idle as of <paramref name="now"/>.</summary>
     public void Advance(DateTime now) => _builder.Advance(now);
 
+    /// <summary>Streaming: the fight in progress, if any.</summary>
+    public Encounter? CurrentEncounter => _builder.Current;
+
+    /// <summary>Streaming: fights closed so far.</summary>
+    public IReadOnlyList<Encounter> ClosedEncounters => _builder.Completed;
+
+    /// <summary>Streaming: flush the open fight (e.g. reached end of a static file).</summary>
+    public IReadOnlyList<Encounter> FinishStreaming(DateTime now)
+    {
+        _builder.Advance(now);
+        _builder.Finish();
+        return _builder.Completed;
+    }
+
     /// <summary>Batch: build every encounter from the lines fed so far.</summary>
     public IReadOnlyList<Encounter> BuildBatch() => _builder.BuildAll(_events, _zones);
 }

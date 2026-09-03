@@ -59,5 +59,6 @@ public enum EncounterEndReason
     AllMobsDead,
     Idle,
     ZoneChange,
+    TimeCap,
     LogEnd,
 }
