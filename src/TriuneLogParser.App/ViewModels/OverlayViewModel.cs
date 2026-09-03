@@ -10,9 +10,9 @@ public sealed class OverlayBar : ObservableObject
     private long _value;
     private double _perSecond;
     private double _fraction;
-    private string _valueText = "";
-    private string _rateText = "";
-    private string _shareText = "";
+    private string _centerText = "";
+    private string _dpsText = "";
+    private System.Windows.Thickness _dpsMargin;
 
     public required string Name { get; init; }
     public Brush Color { get; init; } = Brushes.SteelBlue;
@@ -21,9 +21,14 @@ public sealed class OverlayBar : ObservableObject
     public double PerSecond { get => _perSecond; set => Set(ref _perSecond, value); }
     public double Fraction { get => _fraction; set => Set(ref _fraction, value); }
 
-    public string ValueText { get => _valueText; set => Set(ref _valueText, value); }
-    public string RateText { get => _rateText; set => Set(ref _rateText, value); }
-    public string ShareText { get => _shareText; set => Set(ref _shareText, value); }
+    /// <summary>"1.75M  (42%)" — total and share, shown centred.</summary>
+    public string CenterText { get => _centerText; set => Set(ref _centerText, value); }
+
+    /// <summary>"9.7K/s" — shown at the right (positioned via <see cref="DpsMargin"/>).</summary>
+    public string DpsText { get => _dpsText; set => Set(ref _dpsText, value); }
+
+    /// <summary>Left margin that pushes the DPS text to the right edge (HA=Right doesn't render on this WPF build).</summary>
+    public System.Windows.Thickness DpsMargin { get => _dpsMargin; set => Set(ref _dpsMargin, value); }
 }
 
 /// <summary>Drives the always-on-top overlay: a short ranked list of damage-meter bars.</summary>
@@ -39,6 +44,7 @@ public sealed class OverlayViewModel : ObservableObject
     private string _title = "Waiting for combat…";
     private string _subtitle = "";
     private OverlaySettings _settings = new();
+    private double _nameW = 140, _midW = 120, _dpsW = 78;
 
     public ObservableCollection<OverlayBar> Bars { get; } = new();
 
@@ -50,6 +56,10 @@ public sealed class OverlayViewModel : ObservableObject
         get => _settings;
         set { _settings = value; RaiseSettings(); }
     }
+
+    public double NameW { get => _nameW; private set => Set(ref _nameW, value); }
+    public double MidW { get => _midW; private set => Set(ref _midW, value); }
+    public double DpsW { get => _dpsW; private set => Set(ref _dpsW, value); }
 
     public double Scale => _settings.Scale;
     public int MetricIndex => (int)_settings.Metric;
@@ -88,6 +98,13 @@ public sealed class OverlayViewModel : ObservableObject
         }
 
         Title = encTitle ?? "Encounter";
+
+        // Fixed section widths (no * column — content right of one won't render on this build).
+        double contentW = _settings.Width / Math.Max(0.1, _settings.Scale) - 26;
+        DpsW = 78;
+        NameW = Math.Clamp((contentW - DpsW) * 0.42, 70, 170);
+        MidW = Math.Max(60, contentW - DpsW - NameW);
+
         string dur = TimeSpan.FromSeconds(durationSeconds).ToString(durationSeconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
         Subtitle = $"{(active ? "● " : "")}{dur} · {MetricLabel}";
 
@@ -107,9 +124,9 @@ public sealed class OverlayViewModel : ObservableObject
             bar.Value = value;
             bar.PerSecond = perSec;
             bar.Fraction = top > 0 ? (double)value / top : 0;
-            bar.ValueText = Fmt.Pad(Fmt.Short(value), 7);
-            bar.RateText = Fmt.Pad(Fmt.Rate(perSec), 8);
-            bar.ShareText = Fmt.Pad(grand > 0 ? Fmt.Percent((double)value / grand) : "", 4);
+            string pct = grand > 0 ? $"({Fmt.Percent((double)value / grand)})" : "";
+            bar.CenterText = $"{Fmt.Short(value)}  {pct}";
+            bar.DpsText = Fmt.Rate(perSec);
         }
 
         while (Bars.Count > wanted.Count)

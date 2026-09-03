@@ -38,6 +38,19 @@ feature-scoped; newest first. Format loosely follows
   credited to the owning player instead of being dropped as unknown NPCs. Damage the
   pet takes folds into the owner too, and a swarm pet expiring no longer counts as a
   player death.
+- Breakdown percentage bars were always ~50% wide — they now reflect each row's share.
+- Collapsing a breakdown row no longer snaps back open on the next refresh.
+- Breakdown ability/entity names were near-black on the dark rows; now readable.
+
+### Added
+- **Settings** dialog: configurable **rest period between fights** (0–5 min; 0 = one
+  encounter per pull), **retroactive parse depth** on start (active-only / 30 min / 1 /
+  2 / 6 / 24 h), and an optional **log auto-archive** that renames the log aside with a
+  timestamp once it passes a size (default 200 MB, off).
+- Overlay rows reworked to *name · total (%) · DPS*, larger and shadowed for contrast,
+  muted bars, and the window now auto-sizes to the number of rows.
+- Breakdown rows reworked to match: indented sub-entries, smaller/bolder expand arrows,
+  a narrow proportional bar, name+info left / total+% centre / DPS right.
 
 ### Known issues
 - Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned

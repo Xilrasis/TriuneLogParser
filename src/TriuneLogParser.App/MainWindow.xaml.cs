@@ -18,8 +18,16 @@ public partial class MainWindow : Window
 
         _vm.SelectionShouldFollow += FollowSelection;
         _vm.RequestSavePath = SuggestSavePath;
+        _vm.RequestSettingsDialog = ShowSettingsDialog;
         Closed += (_, _) => _vm.Dispose();
         Loaded += (_, _) => _vm.OnShellReady();
+    }
+
+    private (bool, bool, bool, bool) ShowSettingsDialog(TriuneLogParser.Core.Config.AppSettings settings)
+    {
+        var dlg = new SettingsWindow(settings) { Owner = this };
+        dlg.ShowDialog();
+        return (dlg.Saved, dlg.RestPeriodChanged, dlg.RetroChanged, dlg.FolderChanged);
     }
 
     private string? SuggestSavePath(string suggestedName)
@@ -82,6 +90,6 @@ public partial class MainWindow : Window
     private void BreakdownScroll_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         // Give rows a concrete width so right-aligned columns lay out correctly.
-        _vm.BreakdownWidth = Math.Max(120, e.NewSize.Width - 4);
+        _vm.BreakdownWidth = Math.Max(120, e.NewSize.Width - 16);
     }
 }

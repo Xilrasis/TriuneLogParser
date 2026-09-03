@@ -35,8 +35,17 @@ public sealed class LiveLogService : IDisposable
     public string? Character { get; private set; }
     public string? LogPath { get; private set; }
 
+    /// <summary>How far back to parse on start; 0 = only lines appended after start.</summary>
+    public int RetroParseMinutes { get; set; } = 30;
+
+    /// <summary>&gt;0 to archive the followed log when it passes this size (bytes).</summary>
+    public long LogSplitBytes { get; set; }
+
     /// <summary>Raised (arbitrary thread) whenever new lines have been processed.</summary>
     public event Action? Changed;
+
+    /// <summary>Raised (arbitrary thread) with a short status message (log split, errors).</summary>
+    public event Action<string>? Notice;
 
     public void Configure(EncounterOptions options) => _options = options;
 
@@ -84,17 +93,40 @@ public sealed class LiveLogService : IDisposable
         {
             var tailer = new LogFileTailer(path, TimeSpan.FromMilliseconds(750));
 
-            // Bulk-load everything already in the file.
-            foreach (string line in tailer.ReadNewLines())
+            int retro = RetroParseMinutes;
+            if (retro <= 0)
             {
-                if (ct.IsCancellationRequested || Volatile.Read(ref _generation) != generation)
-                    return;
-                lock (_gate)
-                    _processor?.AddLine(line, tailer.LineNumber);
+                // Active log only.
+                tailer.SeekToEnd();
+            }
+            else
+            {
+                // Bulk-load, but skip lines older than the retro window.
+                DateTime cutoff = DateTime.Now.AddMinutes(-retro);
+                bool inWindow = false;
+                foreach (string line in tailer.ReadNewLines())
+                {
+                    if (ct.IsCancellationRequested || Volatile.Read(ref _generation) != generation)
+                        return;
+
+                    if (!inWindow)
+                    {
+                        if (!LogLine.TryParse(line, 0, out LogLine parsed))
+                            continue; // pre-window noise
+                        if (parsed.Timestamp < cutoff)
+                            continue;
+                        inWindow = true;
+                    }
+
+                    lock (_gate)
+                        _processor?.AddLine(line, tailer.LineNumber);
+                }
             }
 
             _loading = false;
             Changed?.Invoke();
+
+            DateTime lastSplitCheck = DateTime.MinValue;
 
             // Follow appends.
             await tailer.FollowAsync((line, n) =>
@@ -104,6 +136,16 @@ public sealed class LiveLogService : IDisposable
                 lock (_gate)
                     _processor?.AddLine(line, n);
                 Changed?.Invoke();
+
+                if (LogSplitBytes > 0 && DateTime.UtcNow - lastSplitCheck > TimeSpan.FromSeconds(20))
+                {
+                    lastSplitCheck = DateTime.UtcNow;
+                    LogArchiver.Result r = LogArchiver.TrySplit(path, LogSplitBytes);
+                    if (r.Split)
+                        Notice?.Invoke($"Log archived to {System.IO.Path.GetFileName(r.ArchivePath)}");
+                    else if (r.Error != null)
+                        Notice?.Invoke($"Log split failed: {r.Error}");
+                }
             }, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

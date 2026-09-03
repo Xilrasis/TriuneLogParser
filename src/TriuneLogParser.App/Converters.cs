@@ -24,6 +24,20 @@ public sealed class MultiplyConverter : IMultiValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>value − parameter (both doubles); floored at a small positive so a Width stays valid.</summary>
+public sealed class MinusConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        double v = value is double d ? d : 0;
+        double p = parameter is string s && double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out double pp) ? pp : 0;
+        return Math.Max(24, v - p);
+    }
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Fraction (0..1) → a star <see cref="System.Windows.GridLength"/> for a proportional bar column.</summary>
 public sealed class FractionStarConverter : IValueConverter
 {

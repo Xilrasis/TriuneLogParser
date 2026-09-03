@@ -38,8 +38,8 @@ public sealed class BreakdownNode : ObservableObject
         set { if (Set(ref _isExpanded, value)) { Raise(nameof(Glyph)); ExpandedChanged?.Invoke(); } }
     }
 
-    public string Glyph => HasChildren ? (IsExpanded ? "▾" : "▸") : "";
-    public double Indent => 12 + Depth * 16;
+    public string Glyph => HasChildren ? (IsExpanded ? "▼" : "▶") : "";
+    public System.Windows.Thickness IndentThickness => new(Depth * 22, 0, 0, 0);
 
     public event Action? ExpandedChanged;
 }

@@ -43,8 +43,8 @@
 
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding EverQuestFolder}" Style="{StaticResource Dim}" VerticalAlignment="Center"
-                               MaxWidth="280" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-                    <Button Content="Change folder…" Command="{Binding ChangeFolderCommand}" />
+                               MaxWidth="240" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                    <Button Content="⚙ Settings" Command="{Binding SettingsCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -149,72 +149,90 @@
                         <ItemsControl ItemsSource="{Binding Nodes}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:BreakdownNode}">
-                                    <Border Margin="0,1" MinHeight="30" Cursor="Hand" MouseLeftButtonUp="Node_Click"
+                                    <Border Margin="0,1" MinHeight="34" Cursor="Hand" MouseLeftButtonUp="Node_Click"
                                             HorizontalAlignment="Left" ClipToBounds="True"
-                                            Width="{Binding DataContext.BreakdownWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            Background="{StaticResource Panel2}">
+                                            Width="{Binding ActualWidth, ElementName=BreakdownScroll}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#26282d" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Kind}" Value="top">
+                                                        <Setter Property="Background" Value="{StaticResource Panel2}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+
                                         <Grid>
-                                            <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="3" />
+                                            </Grid.RowDefinitions>
+
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,3,10,2">
+                                                <!-- name + info (left) -->
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Width="392"
+                                                            Margin="{Binding IndentThickness}">
+                                                    <TextBlock Text="{Binding Glyph}" FontSize="10" FontWeight="Bold" Width="16"
+                                                               Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                                                                       Foreground="{StaticResource Text}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="FontWeight" Value="Normal" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Kind}" Value="top">
+                                                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                                                <Setter Property="FontSize" Value="13" />
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding Kind}" Value="group">
+                                                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding Sub}" Style="{StaticResource Dim}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding DetailText}" Style="{StaticResource Dim}" FontSize="10"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Visibility="{Binding DetailText, Converter={StaticResource EmptyToCollapsed}}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- total + percent (centre) -->
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Width="188">
+                                                    <TextBlock Text="{Binding ValueText}" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource Text}"
+                                                               Width="118" />
+                                                    <TextBlock Text="{Binding ShareText}" FontFamily="Consolas" Style="{StaticResource Dim}"
+                                                               Margin="10,0,0,0" Width="52" />
+                                                </StackPanel>
+
+                                                <!-- dps (right) -->
+                                                <TextBlock Text="{Binding RateText}" FontFamily="Consolas" FontSize="13"
+                                                           Foreground="{StaticResource Accent}" VerticalAlignment="Center" Width="100" />
+                                            </StackPanel>
+
+                                            <!-- proportional percentage bar -->
+                                            <Grid Grid.Row="1">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="{Binding BarStar}" />
-                                                    <ColumnDefinition Width="{Binding RestStar}" />
+                                                    <ColumnDefinition Width="{Binding BarFraction, Converter={StaticResource FractionStar}}" />
+                                                    <ColumnDefinition Width="{Binding BarFraction, Converter={StaticResource FractionRestStar}}" />
                                                 </Grid.ColumnDefinitions>
-                                                <Border Grid.Column="0">
+                                                <Border Grid.Column="0" CornerRadius="1.5">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="{StaticResource Bar}" />
+                                                            <Setter Property="Background" Value="#4b73a8" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Kind}" Value="top">
-                                                                    <Setter Property="Background" Value="{StaticResource BarActive}" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Kind}" Value="leaf">
-                                                                    <Setter Property="Background" Value="#2c3d55" />
+                                                                    <Setter Property="Background" Value="{StaticResource Accent}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
                                                 </Border>
-                                            </Grid>
-
-                                            <Grid Margin="10,4,14,4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="16" />
-                                                    <ColumnDefinition Width="112" />
-                                                    <ColumnDefinition Width="52" />
-                                                    <ColumnDefinition Width="86" />
-                                                    <ColumnDefinition Width="248" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Grid.Column="0" Text="{Binding Glyph}" Foreground="{StaticResource TextDim}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="{Binding Depth, Converter={StaticResource IndentMargin}}" />
-
-                                                <TextBlock Grid.Column="1" Text="{Binding ValueText}" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="2" Text="{Binding ShareText}" FontFamily="Consolas" Style="{StaticResource Dim}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="3" Text="{Binding RateText}" FontFamily="Consolas" Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
-
-                                                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="FontWeight" Value="Normal" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Kind}" Value="top">
-                                                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Kind}" Value="group">
-                                                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding Sub}" Style="{StaticResource Dim}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Column="5" Text="{Binding DetailText}" Style="{StaticResource Dim}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
                                             </Grid>
                                         </Grid>
                                     </Border>

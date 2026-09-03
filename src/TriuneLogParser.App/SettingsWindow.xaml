@@ -1,0 +1,73 @@
+<Window x:Class="TriuneLogParser.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Height="420" Width="480"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource Bg}">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- EQ folder -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="EverQuest folder" Foreground="{StaticResource Text}" FontWeight="SemiBold" />
+            <DockPanel Margin="0,4,0,0">
+                <Button DockPanel.Dock="Right" Content="Change…" Click="ChangeFolder_Click" Margin="8,0,0,0" />
+                <TextBlock x:Name="FolderText" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </StackPanel>
+
+        <!-- rest period -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" x:Name="RestLabel" Foreground="{StaticResource Accent}"
+                           FontFamily="Consolas" VerticalAlignment="Center" />
+                <TextBlock Text="Rest period between fights" Foreground="{StaticResource Text}" FontWeight="SemiBold" />
+            </DockPanel>
+            <Slider x:Name="RestSlider" Minimum="0" Maximum="300" TickFrequency="15" IsSnapToTickEnabled="True"
+                    Margin="0,6,0,0" ValueChanged="RestSlider_Changed" />
+            <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Text="A gap this long with no new engagement ends an encounter. 0 splits every pull into its own encounter." />
+        </StackPanel>
+
+        <!-- retro parse -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock Text="On start, parse the log back" Foreground="{StaticResource Text}" FontWeight="SemiBold" />
+            <ComboBox x:Name="RetroCombo" Margin="0,4,0,0" SelectionChanged="Retro_Changed">
+                <ComboBoxItem Tag="0" Content="Active log only (no history)" />
+                <ComboBoxItem Tag="30" Content="30 minutes" />
+                <ComboBoxItem Tag="60" Content="1 hour" />
+                <ComboBoxItem Tag="120" Content="2 hours" />
+                <ComboBoxItem Tag="360" Content="6 hours" />
+                <ComboBoxItem Tag="1440" Content="24 hours" />
+            </ComboBox>
+        </StackPanel>
+
+        <!-- log split -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,16">
+            <CheckBox x:Name="SplitCheck" Foreground="{StaticResource Text}" FontWeight="SemiBold"
+                      Content="Automatically archive the log when it grows past" Click="SplitCheck_Click" />
+            <DockPanel Margin="20,6,0,0">
+                <TextBlock DockPanel.Dock="Right" Text="MB" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                <TextBox x:Name="SplitSizeBox" Width="70" HorizontalAlignment="Left" Background="{StaticResource Panel2}"
+                         Foreground="{StaticResource Text}" BorderBrush="{StaticResource Line}" Padding="4,2" />
+            </DockPanel>
+            <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Margin="20,2,0,0" TextWrapping="Wrap"
+                       Text="Renames the log aside with a timestamp so the game starts a fresh one. Off by default." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="Cancel" Click="Cancel_Click" Width="80" />
+            <Button Content="Save" Click="Save_Click" Width="80" Margin="8,0,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>

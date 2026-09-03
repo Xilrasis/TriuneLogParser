@@ -10,6 +10,7 @@
         <app:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
         <app:FractionStarConverter x:Key="FractionStar" />
         <app:FractionStarConverter x:Key="FractionRestStar" Rest="True" />
+        <app:MinusConverter x:Key="Minus" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
         <!-- palette -->

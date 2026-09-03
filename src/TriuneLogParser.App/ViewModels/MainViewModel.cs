@@ -31,23 +31,56 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         _settings = AppSettings.Load();
-        _service.Configure(new EncounterOptions
-        {
-            IdleTimeout = TimeSpan.FromSeconds(Math.Clamp(_settings.IdleTimeoutSeconds, 5, 600)),
-        });
+        ApplyServiceSettings();
         _overlayVm.Settings = _settings.Overlay.Clamp();
+        _service.Notice += msg => StatusText = msg;
 
         ChangeFolderCommand = new RelayCommand(ChangeFolder);
         FollowLiveCommand = new RelayCommand(() => { AutoFollow = true; Refresh(); });
         ReloadCommand = new RelayCommand(ReloadCurrent, () => SelectedCharacter is not null);
         ToggleOverlayCommand = new RelayCommand(() => OverlayVisible = !OverlayVisible);
         ToggleClickThroughCommand = new RelayCommand(ToggleOverlayClickThrough, () => OverlayVisible);
+        SettingsCommand = new RelayCommand(OpenSettings);
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(750) };
         _timer.Tick += (_, _) => { _service.Tick(DateTime.Now); Refresh(); };
         _timer.Start();
 
         RefreshCharacters();
+    }
+
+    public ICommand SettingsCommand { get; }
+
+    /// <summary>Raised so the shell can show the modal settings dialog.</summary>
+    public Func<AppSettings, (bool saved, bool restChanged, bool retroChanged, bool folderChanged)>? RequestSettingsDialog;
+
+    private void OpenSettings()
+    {
+        if (RequestSettingsDialog is null)
+            return;
+
+        (bool saved, bool restChanged, bool retroChanged, bool folderChanged) = RequestSettingsDialog(_settings);
+        if (!saved)
+            return;
+
+        ApplyServiceSettings();
+        Raise(nameof(EverQuestFolder));
+        Raise(nameof(NeedsSetup));
+
+        if (folderChanged)
+            RefreshCharacters();
+
+        if ((restChanged || retroChanged || folderChanged) && SelectedCharacter is { } c)
+            _service.Start(c.Path, c.Character);
+    }
+
+    private void ApplyServiceSettings()
+    {
+        _service.Configure(EncounterOptions.ForRestPeriod(_settings.RestPeriodSeconds));
+        _service.RetroParseMinutes = _settings.RetroParseMinutes;
+        _service.LogSplitBytes = _settings.LogSplitEnabled
+            ? (long)Math.Clamp(_settings.LogSplitSizeMb, 5, 4000) * 1024 * 1024
+            : 0;
     }
 
     /// <summary>Called by the shell once its window is up, so child windows have an owner context.</summary>
@@ -297,13 +330,28 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string BreakdownHeader { get => _breakdownHeader; private set => Set(ref _breakdownHeader, value); }
 
     private double _breakdownWidth = 600;
+    private double _bkNameW = 340, _bkMidW = 168, _bkDpsW = 92;
 
     /// <summary>Usable width for a breakdown row, pushed from the view on resize.</summary>
     public double BreakdownWidth
     {
         get => _breakdownWidth;
-        set => Set(ref _breakdownWidth, Math.Max(120, value));
+        set
+        {
+            if (!Set(ref _breakdownWidth, Math.Max(120, value)))
+                return;
+
+            double w = _breakdownWidth - 18;
+            BkDpsW = 92;
+            BkMidW = 168;
+            BkNameW = Math.Max(120, w - BkDpsW - BkMidW);
+        }
     }
+
+    // Fixed breakdown section widths (no * column — this WPF build won't render content to its right).
+    public double BkNameW { get => _bkNameW; private set => Set(ref _bkNameW, value); }
+    public double BkMidW { get => _bkMidW; private set => Set(ref _bkMidW, value); }
+    public double BkDpsW { get => _bkDpsW; private set => Set(ref _bkDpsW, value); }
 
     public Metric Metric
     {
@@ -313,12 +361,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public void SetMetric(Metric m) => Metric = m;
 
+    private bool _autoExpandedOnce;
+
     public void ToggleNode(BreakdownNode node)
     {
         if (!node.HasChildren)
             return;
         node.IsExpanded = !node.IsExpanded;
         if (node.IsExpanded) _expandedPaths.Add(node.Label); else _expandedPaths.Remove(node.Label);
+        _autoExpandedOnce = true; // the user has taken control of expansion
         Flatten();
     }
 
@@ -326,6 +377,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         Nodes.Clear();
         _tree = new();
+        _expandedPaths.Clear();
+        _autoExpandedOnce = false;
         BreakdownHeader = "Select an encounter";
     }
 
@@ -341,9 +394,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _lastReport = report;
         _tree = BreakdownTreeBuilder.Build(report, Metric, report.DurationSeconds, _service.ClassLabel);
 
-        // First time we show a breakdown, open the top fighter so the split is visible.
-        if (_expandedPaths.Count == 0 && _tree.Count > 0 && _tree[0].HasChildren)
+        // Open the top fighter once (never re-open after the user has touched expansion).
+        if (!_autoExpandedOnce && _expandedPaths.Count == 0 && _tree.Count > 0 && _tree[0].HasChildren)
+        {
             _expandedPaths.Add(_tree[0].Label);
+            _autoExpandedOnce = true;
+        }
 
         RestoreExpansion(_tree);
         Flatten();

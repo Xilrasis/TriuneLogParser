@@ -4,8 +4,8 @@
         xmlns:vm="clr-namespace:TriuneLogParser.App.ViewModels"
         Title="TriuneLogParser Overlay"
         WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False"
-        Topmost="True" ResizeMode="CanResizeWithGrip"
-        Background="Transparent" MinWidth="160" MinHeight="90"
+        Topmost="True" ResizeMode="CanResize" SizeToContent="Height"
+        Background="Transparent" MinWidth="180" MinHeight="60"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
 
     <Border x:Name="Root" CornerRadius="6" Background="#1b1c1f" BorderBrush="#3a3d44" BorderThickness="1"
@@ -65,28 +65,34 @@
             </Border>
 
             <!-- bars -->
-            <ItemsControl ItemsSource="{Binding Bars}" Margin="4">
+            <ItemsControl x:Name="BarList" ItemsSource="{Binding Bars}" Margin="4">
+                <ItemsControl.Resources>
+                    <DropShadowEffect x:Key="TextShadow" ShadowDepth="1" BlurRadius="3" Direction="315"
+                                      Color="#000000" Opacity="1" />
+                </ItemsControl.Resources>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:OverlayBar}">
-                        <Border Height="18" Margin="0,1" CornerRadius="3" Background="#26282c" ClipToBounds="True">
+                        <Border Height="22" Margin="0,2" CornerRadius="3" Background="#202226" ClipToBounds="True">
                             <Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{Binding Fraction, Converter={StaticResource FractionStar}}" />
                                         <ColumnDefinition Width="{Binding Fraction, Converter={StaticResource FractionRestStar}}" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{Binding Color}" Opacity="0.85" />
+                                    <Border Grid.Column="0" Background="{Binding Color}" Opacity="0.55" />
                                 </Grid>
-                                <DockPanel Margin="6,0,6,0">
-                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" Foreground="#f2f3f4" FontSize="11"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding RateText}" Foreground="#dfe3ea" FontFamily="Consolas" FontSize="11"
-                                               VerticalAlignment="Center" Margin="8,0,0,0" />
-                                    <TextBlock Text="{Binding ShareText}" Foreground="#c8ccd2" FontFamily="Consolas" FontSize="10"
-                                               VerticalAlignment="Center" Margin="6,0,0,0" />
-                                    <TextBlock Text="{Binding ValueText}" Foreground="#c8ccd2" FontFamily="Consolas" FontSize="10"
-                                               VerticalAlignment="Center" Margin="6,0,0,0" />
-                                </DockPanel>
+                                <StackPanel Orientation="Horizontal" Margin="7,0,7,0"
+                                            Width="{Binding ActualWidth, ElementName=BarList}">
+                                    <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Width="118"
+                                               Effect="{StaticResource TextShadow}" />
+                                    <TextBlock Text="{Binding CenterText}" Foreground="#eef0f2" FontFamily="Consolas" FontSize="11"
+                                               VerticalAlignment="Center" TextAlignment="Center" Width="150"
+                                               Effect="{StaticResource TextShadow}" />
+                                    <TextBlock Text="{Binding DpsText}" Foreground="White" FontWeight="SemiBold" FontFamily="Consolas"
+                                               FontSize="12" VerticalAlignment="Center" Width="90"
+                                               Effect="{StaticResource TextShadow}" />
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </DataTemplate>

@@ -27,7 +27,7 @@ public partial class OverlayWindow : Window
         Left = s.Left;
         Top = s.Top;
         Width = s.Width;
-        Height = s.Height;
+        // Height is driven by SizeToContent="Height".
         Root.Background = new System.Windows.Media.SolidColorBrush(
             System.Windows.Media.Color.FromArgb((byte)(s.Opacity * 255), 0x1b, 0x1c, 0x1f));
 
@@ -114,7 +114,6 @@ public partial class OverlayWindow : Window
             s.Left = Left;
             s.Top = Top;
             s.Width = Width;
-            s.Height = Height;
         }
 
         s.Shown = IsVisible;

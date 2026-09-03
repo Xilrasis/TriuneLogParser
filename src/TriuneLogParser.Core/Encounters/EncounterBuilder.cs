@@ -30,6 +30,22 @@ public sealed class EncounterOptions
     /// one encounter but a real pause splits. Set to zero for strict per-pull.
     /// </summary>
     public TimeSpan ReengageWindow { get; set; } = TimeSpan.FromSeconds(12);
+
+    /// <summary>
+    /// Build options from a single "rest period" (0–300 s). 0 splits every pull into its
+    /// own encounter (chain-pulls are not merged); a larger value merges chain-pulls up
+    /// to that gap and closes quiet fights after it.
+    /// </summary>
+    public static EncounterOptions ForRestPeriod(int seconds)
+    {
+        seconds = Math.Clamp(seconds, 0, 300);
+        return new EncounterOptions
+        {
+            SplitOnAllMobsDead = true,
+            ReengageWindow = TimeSpan.FromSeconds(seconds),
+            IdleTimeout = TimeSpan.FromSeconds(Math.Max(8, seconds)),
+        };
+    }
 }
 
 /// <summary>

@@ -27,6 +27,23 @@ public sealed class LogFileTailer : IDisposable
     /// <summary>Running 1-based count of lines emitted so far.</summary>
     public int LineNumber => _lineNumber;
 
+    /// <summary>Skip everything currently in the file; only lines appended after this are read.</summary>
+    public void SeekToEnd()
+    {
+        try
+        {
+            var fi = new FileInfo(_path);
+            if (fi.Exists)
+            {
+                _position = fi.Length;
+                _lastLength = fi.Length;
+            }
+        }
+        catch (IOException)
+        {
+        }
+    }
+
     /// <summary>Character name inferred from the file name (eqlog_&lt;Character&gt;_&lt;server&gt;.txt).</summary>
     public string? CharacterName => TryExtractCharacterName(_path);
 

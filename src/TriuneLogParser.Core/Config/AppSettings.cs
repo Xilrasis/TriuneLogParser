@@ -16,8 +16,32 @@ public sealed class AppSettings
     /// <summary>Character log file names the user has chosen to follow.</summary>
     public List<string> FollowedLogs { get; set; } = new();
 
-    /// <summary>Idle seconds before an open fight is closed.</summary>
+    /// <summary>Idle seconds before an open fight is closed (legacy name for the rest period).</summary>
     public int IdleTimeoutSeconds { get; set; } = 45;
+
+    /// <summary>
+    /// Rest period between fights, 0–300 s. A gap this long (with no re-engage) ends an
+    /// encounter. 0 = split every mob into its own encounter as far as engage/death
+    /// lines allow.
+    /// </summary>
+    [JsonIgnore]
+    public int RestPeriodSeconds
+    {
+        get => Math.Clamp(IdleTimeoutSeconds, 0, 300);
+        set => IdleTimeoutSeconds = Math.Clamp(value, 0, 300);
+    }
+
+    /// <summary>
+    /// How far back to parse when monitoring starts: 0 (active only), 30, 60, 120, 360
+    /// or 1440 minutes.
+    /// </summary>
+    public int RetroParseMinutes { get; set; } = 30;
+
+    /// <summary>Automatically archive the log file once it grows past a size.</summary>
+    public bool LogSplitEnabled { get; set; }
+
+    /// <summary>Size in MB at which to archive the log (default 200).</summary>
+    public int LogSplitSizeMb { get; set; } = 200;
 
     /// <summary>When following several characters, merge their output into one parse.</summary>
     public bool MergeFollowedCharacters { get; set; }
