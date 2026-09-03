@@ -1,0 +1,22 @@
+[Thu Sep 03 20:00:00 2026] Logging to 'eqlog.txt' is now *ON*.
+[Thu Sep 03 20:00:01 2026] You have entered the Plane of Fire.
+[Thu Sep 03 20:00:10 2026] You crush a doomfire soldier for 812 points of damage.
+[Thu Sep 03 20:00:10 2026] Sampleton scores a critical hit! (812)
+[Thu Sep 03 20:00:11 2026] You try to kick a doomfire soldier, but miss!
+[Thu Sep 03 20:00:12 2026] Grumble crushes a doomfire soldier for 240 points of damage.
+[Thu Sep 03 20:00:12 2026] Grumble (Owner: Sampleton) hit a doomfire soldier for 355 points of non-melee damage. (Frost Claw)
+[Thu Sep 03 20:00:13 2026] You deliver a critical blast! (1904) (Distant Strike)
+[Thu Sep 03 20:00:13 2026] Sampleton hit a doomfire soldier for 1904 points of non-melee damage. (Distant Strike)
+[Thu Sep 03 20:00:14 2026] A doomfire adept hits YOU for 401 points of damage.
+[Thu Sep 03 20:00:15 2026] You kick a doomfire adept for 1330 points of damage.
+[Thu Sep 03 20:00:16 2026] a doomfire soldier was hit by non-melee for 43 points of damage.
+[Thu Sep 03 20:00:17 2026] Sampleton has healed himself for 220 points of damage. (Killing Spree)
+[Thu Sep 03 20:00:18 2026] You crush a doomfire soldier for 640 points of damage.
+[Thu Sep 03 20:00:19 2026] a doomfire soldier has been slain by Sampleton!
+[Thu Sep 03 20:00:22 2026] Grumble crushes a doomfire adept for 210 points of damage.
+[Thu Sep 03 20:00:24 2026] You pierce a doomfire adept for 720 points of damage.
+[Thu Sep 03 20:00:25 2026] You have slain a doomfire adept!
+[Thu Sep 03 20:05:30 2026] You crush a flame overlord for 980 points of damage.
+[Thu Sep 03 20:05:32 2026] A flame overlord hits YOU for 1220 points of damage.
+[Thu Sep 03 20:05:34 2026] You crush a flame overlord for 1010 points of damage.
+[Thu Sep 03 20:05:36 2026] You have slain a flame overlord!

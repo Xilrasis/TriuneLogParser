@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test TriuneLogParser.sln -c Release
+
+      - name: Publish CLI (standalone single-file win-x64)
+        run: >
+          dotnet publish src/TriuneLogParser.Cli -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o dist/cli
+
+      - name: Publish desktop app (standalone single-file win-x64)
+        run: >
+          dotnet publish src/TriuneLogParser.App -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o dist/app
+
+      - name: Stage release assets
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item dist/app/TriuneLogParser.exe "out/TriuneLogParser-$tag-win-x64.exe"
+          Copy-Item dist/cli/triuneparse.exe    "out/triuneparse-$tag-win-x64.exe"
+          Get-ChildItem out
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true
+          body: |
+            Standalone Windows x64 builds — no .NET install required.
+
+            - `TriuneLogParser-*.exe` — desktop app (parser + overlay)
+            - `triuneparse-*.exe` — command-line parser
+
+            See [CHANGELOG.md](CHANGELOG.md) for what changed.

@@ -1,0 +1,74 @@
+namespace TriuneLogParser.Core.Parsing;
+
+/// <summary>
+/// Maps log pronouns ("You", "YOU", "yourself", "himself", "herself") to the logging
+/// character, and does light cleanup of entity names (leading article, trailing
+/// possessive, "'s corpse").
+/// </summary>
+public sealed class NameResolver
+{
+    private static readonly HashSet<string> SelfTokens = new(StringComparer.Ordinal)
+    {
+        "You", "YOU", "you", "Your", "your", "YOUR",
+        "yourself", "Yourself", "himself", "Himself", "herself", "Herself", "itself",
+    };
+
+    public string? CharacterName { get; set; }
+
+    public NameResolver(string? characterName = null) => CharacterName = characterName;
+
+    /// <summary>Resolve a raw name token from the log to a canonical entity name.</summary>
+    public string Resolve(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        raw = raw.Trim();
+
+        if (SelfTokens.Contains(raw))
+            return CharacterName ?? "You";
+
+        // "itself" / "himself" as a heal target with no character context.
+        if (raw.Equals("itself", StringComparison.OrdinalIgnoreCase))
+            return raw;
+
+        raw = TrimCorpse(raw);
+        raw = NormalizeArticle(raw);
+        return raw;
+    }
+
+    /// <summary>
+    /// EverQuest capitalises the article at the start of a sentence ("A doomfire
+    /// soldier hits YOU"). Lower-case it so the mob is one entity regardless of where
+    /// it appeared. A following capital ("The Ancient One") marks a proper name and is
+    /// left alone.
+    /// </summary>
+    private static string NormalizeArticle(string name)
+    {
+        int sp = name.IndexOf(' ');
+        if (sp <= 0 || sp + 1 >= name.Length)
+            return name;
+
+        string article = name[..sp];
+        bool isArticle = article is "A" or "An" or "The";
+        if (isArticle && char.IsLower(name[sp + 1]))
+            return char.ToLowerInvariant(name[0]) + name[1..];
+
+        return name;
+    }
+
+    /// <summary>True when the resolved name is (or maps to) the logging character.</summary>
+    public bool IsSelf(string? resolved) =>
+        resolved != null && CharacterName != null &&
+        resolved.Equals(CharacterName, StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsSelfToken(string raw) => SelfTokens.Contains(raw.Trim());
+
+    private static string TrimCorpse(string name)
+    {
+        const string corpse = "'s corpse";
+        if (name.EndsWith(corpse, StringComparison.OrdinalIgnoreCase))
+            name = name[..^corpse.Length];
+        return name;
+    }
+}

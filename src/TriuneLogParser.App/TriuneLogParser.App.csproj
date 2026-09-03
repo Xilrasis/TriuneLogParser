@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>TriuneLogParser.App</RootNamespace>
+    <AssemblyName>TriuneLogParser</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TriuneLogParser.Core\TriuneLogParser.Core.csproj" />
+  </ItemGroup>
+
+</Project>

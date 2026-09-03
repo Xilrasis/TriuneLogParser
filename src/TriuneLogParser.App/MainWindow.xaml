@@ -1,0 +1,26 @@
+<Window x:Class="TriuneLogParser.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TriuneLogParser" Height="480" Width="760"
+        Background="#1e1f22">
+    <Grid Margin="24">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="TriuneLogParser"
+                       FontSize="30" FontWeight="Bold" Foreground="#e6e6e6"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Project Triune EverQuest combat-log parser"
+                       FontSize="14" Foreground="#9aa0a6" Margin="0,6,0,0"
+                       HorizontalAlignment="Center" />
+            <Border Background="#2b2d31" CornerRadius="8" Padding="18" Margin="0,24,0,0">
+                <StackPanel>
+                    <TextBlock Foreground="#c8c8c8" TextWrapping="Wrap" MaxWidth="520"
+                               Text="Phase 1 (parsing engine + CLI) is in place. This desktop shell is a placeholder — the encounter browser and always-on-top overlay arrive in Phases 2 and 3." />
+                    <TextBlock Foreground="#9aa0a6" Margin="0,12,0,0" TextWrapping="Wrap" MaxWidth="520"
+                               Text="For now, parse a log from the command line:  triuneparse &lt;logfile&gt; --table" />
+                </StackPanel>
+            </Border>
+            <TextBlock x:Name="VersionText" Foreground="#6b7075" Margin="0,18,0,0"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</Window>

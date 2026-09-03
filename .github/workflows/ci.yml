@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore TriuneLogParser.sln
+
+      - name: Build
+        run: dotnet build TriuneLogParser.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test TriuneLogParser.sln -c Release --no-build --verbosity normal
+
+      - name: Smoke-test the CLI against the sample log
+        shell: pwsh
+        run: |
+          dotnet run --project src/TriuneLogParser.Cli -c Release --no-build -- `
+            samples/eqlog_Sampleton_multiclass.txt --json > sample-out.json
+          Get-Content sample-out.json | Select-Object -First 5

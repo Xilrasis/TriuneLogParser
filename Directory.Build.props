@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Authors>TriuneLogParser contributors</Authors>
+    <Product>TriuneLogParser</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>
