@@ -82,7 +82,7 @@ content it hasn't seen.
 | 1 | ✅ Parsing engine, encounter builder, aggregation, `triuneparse` CLI |
 | 2 | ✅ WPF app: first-run EQ-folder picker, live tail, encounter browser, breakdown tree |
 | 3 | ✅ Always-on-top overlay with configurable damage-meter bars |
-| 4 | Class inference, encounter export, session history, per-mob views |
+| 4 | ✅ Class inference, encounter export, per-mob views  ·  _(session history: later)_ |
 
 See [CHANGELOG.md](CHANGELOG.md) for what has landed.
 

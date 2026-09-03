@@ -1,3 +1,4 @@
+using TriuneLogParser.Core.Classes;
 using TriuneLogParser.Core.Encounters;
 using TriuneLogParser.Core.Logging;
 using TriuneLogParser.Core.Model;
@@ -30,6 +31,7 @@ public sealed class CombatLogProcessor
     }
 
     public ParserMetrics Metrics { get; } = new();
+    public ClassTracker Classes { get; } = new();
     public EncounterBuilder Builder => _builder;
     public CombatLogParser Parser => _parser;
     public IReadOnlyList<CombatEvent> Events => _events;
@@ -79,6 +81,7 @@ public sealed class CombatLogProcessor
             _builder.Roster.Observe(evt);
             _builder.Advance(evt.Timestamp);
             _builder.Handle(evt);
+            Classes.Observe(evt);
         }
     }
 
@@ -100,5 +103,11 @@ public sealed class CombatLogProcessor
     }
 
     /// <summary>Batch: build every encounter from the lines fed so far.</summary>
-    public IReadOnlyList<Encounter> BuildBatch() => _builder.BuildAll(_events, _zones);
+    public IReadOnlyList<Encounter> BuildBatch()
+    {
+        IReadOnlyList<Encounter> result = _builder.BuildAll(_events, _zones);
+        foreach (CombatEvent e in _events) // kinds are set now
+            Classes.Observe(e);
+        return result;
+    }
 }

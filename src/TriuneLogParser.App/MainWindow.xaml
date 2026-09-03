@@ -127,15 +127,20 @@
             <!-- breakdown -->
             <Border Grid.Column="2" Background="{StaticResource Panel}" CornerRadius="6">
                 <DockPanel Margin="12">
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                        <ToggleButton Content="Damage done" Click="Metric_Click" Tag="DamageDone"
-                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageDone}" />
-                        <ToggleButton Content="Damage taken" Click="Metric_Click" Tag="DamageTaken" Margin="6,0,0,0"
-                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageTaken}" />
-                        <ToggleButton Content="Healing" Click="Metric_Click" Tag="Healing" Margin="6,0,0,0"
-                                      IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Healing}" />
-                        <Button Content="Follow live fight" Command="{Binding FollowLiveCommand}" Margin="16,0,0,0" />
-                    </StackPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Right" Content="Export…" Command="{Binding ExportCommand}" />
+                        <Button DockPanel.Dock="Right" Content="Follow live fight" Command="{Binding FollowLiveCommand}" Margin="0,0,8,0" />
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton Content="Damage done" Click="Metric_Click" Tag="DamageDone"
+                                          IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageDone}" />
+                            <ToggleButton Content="Damage taken" Click="Metric_Click" Tag="DamageTaken" Margin="6,0,0,0"
+                                          IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=DamageTaken}" />
+                            <ToggleButton Content="Healing" Click="Metric_Click" Tag="Healing" Margin="6,0,0,0"
+                                          IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Healing}" />
+                            <ToggleButton Content="Mobs" Click="Metric_Click" Tag="Mobs" Margin="6,0,0,0"
+                                          IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Mobs}" />
+                        </StackPanel>
+                    </DockPanel>
 
                     <TextBlock DockPanel.Dock="Top" Text="{Binding BreakdownHeader}" Style="{StaticResource Dim}" Margin="2,0,0,8" />
 

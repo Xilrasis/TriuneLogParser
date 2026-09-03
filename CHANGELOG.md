@@ -25,6 +25,13 @@ feature-scoped; newest first. Format loosely follows
   to the last one), with metric selection (DPS / damage / damage+heals / damage taken /
   healing), adjustable opacity, UI scale and row count, and a click-through mode
   toggled from the main window. Position and preferences persist.
+- **Per-mob view, class inference and export (Phase 4).**
+  - A **Mobs** view: damage taken per NPC, time-to-kill, killing blow, and which
+    fighters contributed.
+  - **Class inference** — signature abilities/spells map each player to its class(es)
+    (multiclass-aware, e.g. "Monk / Enchanter / Necromancer"), shown on the fighter row.
+  - **Export** a selected encounter (or range) to CSV or JSON.
+  - `triuneparse --table` now prints a per-mob summary.
 
 ### Known issues
 - Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned

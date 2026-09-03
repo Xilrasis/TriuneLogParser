@@ -152,6 +152,15 @@ static void PrintEncounterTable(EncounterReport r, Encounter enc, int top)
             Console.WriteLine($"   {Trunc(f.Name, 18),-18} {f.DamageTaken,12:N0}");
     }
 
+    if (r.Mobs.Count > 0)
+    {
+        Console.WriteLine($"   {"Mob",-26} {"Damage",12} {"TTK",7}  killed by");
+        foreach (MobStats m in r.Mobs.Take(12))
+        {
+            Console.WriteLine($"   {Trunc(m.Name, 26),-26} {m.DamageTaken,12:N0} {m.TimeToKillSeconds,6:0}s  {m.LastKiller ?? "-"}");
+        }
+    }
+
     Console.WriteLine();
 }
 

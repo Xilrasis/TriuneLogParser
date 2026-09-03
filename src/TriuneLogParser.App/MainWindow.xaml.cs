@@ -17,8 +17,20 @@ public partial class MainWindow : Window
         DataContext = _vm;
 
         _vm.SelectionShouldFollow += FollowSelection;
+        _vm.RequestSavePath = SuggestSavePath;
         Closed += (_, _) => _vm.Dispose();
         Loaded += (_, _) => _vm.OnShellReady();
+    }
+
+    private string? SuggestSavePath(string suggestedName)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = suggestedName,
+            DefaultExt = ".csv",
+            Filter = "CSV (*.csv)|*.csv|JSON (*.json)|*.json",
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
     private void EncounterList_SelectionChanged(object sender, SelectionChangedEventArgs e)

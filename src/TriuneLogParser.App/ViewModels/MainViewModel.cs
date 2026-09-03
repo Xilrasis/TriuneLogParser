@@ -269,6 +269,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private List<BreakdownNode> _tree = new();
     private readonly HashSet<string> _expandedPaths = new();
+    private EncounterReport? _lastReport;
+
+    public ICommand ExportCommand => _exportCommand ??= new RelayCommand(Export, () => _lastReport is not null);
+    private RelayCommand? _exportCommand;
+
+    /// <summary>Raised so the view can show a save dialog; returns the chosen path or null.</summary>
+    public Func<string, string?>? RequestSavePath;
+
+    private void Export()
+    {
+        if (_lastReport is not { } report)
+            return;
+
+        string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        string? path = RequestSavePath?.Invoke($"triune-encounter-{stamp}");
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+        string content = ext == ".json"
+            ? Core.Aggregation.EncounterExport.ToJson(report)
+            : Core.Aggregation.EncounterExport.ToCsv(report);
+        System.IO.File.WriteAllText(path, content);
+    }
 
     public string BreakdownHeader { get => _breakdownHeader; private set => Set(ref _breakdownHeader, value); }
 
@@ -314,7 +338,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _tree = BreakdownTreeBuilder.Build(report, Metric, report.DurationSeconds);
+        _lastReport = report;
+        _tree = BreakdownTreeBuilder.Build(report, Metric, report.DurationSeconds, _service.ClassLabel);
 
         // First time we show a breakdown, open the top fighter so the split is visible.
         if (_expandedPaths.Count == 0 && _tree.Count > 0 && _tree[0].HasChildren)
@@ -327,7 +352,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             Metric.DamageDone => "Damage done",
             Metric.DamageTaken => "Damage taken",
-            _ => "Healing",
+            Metric.Healing => "Healing",
+            _ => "Mobs",
         };
         string span = _selectedIds.Count > 1 ? $"{_selectedIds.Count} encounters" : "encounter";
         BreakdownHeader = $"{what} · {span} · {report.DurationSeconds:N0}s · {string.Join(" + ", report.Titles.Distinct().Take(3))}";

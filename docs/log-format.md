@@ -116,6 +116,15 @@ AA-cap spam, `[NMS]` loot spam, killing-spree / RAMPAGE / FLURRY flavor lines (t
 real damage is on its own line), MOTD, `Logging to ... is now *ON*`, absorb / rune
 "shielded itself from" lines.
 
+## Class inference
+
+`src/TriuneLogParser.Core/Classes/ClassCatalog.cs` maps signature ability / spell
+names (as they appear in the parenthetical of a non-melee hit, or as a melee verb) to
+the class that uses them. Project Triune is multiclass, so `ClassTracker` reports every
+class a player has shown evidence for (needs ≥2 uses of a signature). Add confirmed
+signatures to the catalog as they're seen — err on the side of leaving ambiguous ones
+out.
+
 ## Coverage
 
 The parser tracks how many timestamped lines looked damage-related but matched no rule

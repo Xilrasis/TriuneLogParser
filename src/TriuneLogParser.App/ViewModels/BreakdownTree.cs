@@ -3,7 +3,7 @@ using TriuneLogParser.Core.Aggregation;
 
 namespace TriuneLogParser.App.ViewModels;
 
-public enum Metric { DamageDone, DamageTaken, Healing }
+public enum Metric { DamageDone, DamageTaken, Healing, Mobs }
 
 /// <summary>
 /// One row in the damage-meter breakdown. Rows form a tree (fighter → group → leaf);
@@ -47,8 +47,12 @@ public sealed class BreakdownNode : ObservableObject
 public static class BreakdownTreeBuilder
 {
     /// <summary>Build the fighter/group/leaf tree for one metric of a report.</summary>
-    public static List<BreakdownNode> Build(EncounterReport report, Metric metric, double seconds)
+    public static List<BreakdownNode> Build(
+        EncounterReport report, Metric metric, double seconds, Func<string, string>? classLabel = null)
     {
+        if (metric == Metric.Mobs)
+            return BuildMobs(report);
+
         IReadOnlyList<FighterStats> fighters = metric switch
         {
             Metric.DamageDone => report.DamageDone,
@@ -79,10 +83,15 @@ public static class BreakdownTreeBuilder
             if (fv <= 0)
                 continue;
 
+            string classes = classLabel?.Invoke(f.Name) ?? "";
+            string sub = metric == Metric.DamageDone ? $"crit {f.CritRate:P0} · acc {f.Accuracy:P0}" : "";
+            if (classes.Length > 0)
+                sub = sub.Length > 0 ? $"{classes} · {sub}" : classes;
+
             var fighter = new BreakdownNode
             {
                 Label = f.Name,
-                Sub = metric == Metric.DamageDone ? $"crit {f.CritRate:P0} · acc {f.Accuracy:P0}" : "",
+                Sub = sub,
                 Depth = 0,
                 Kind = "top",
                 Value = fv,
@@ -97,6 +106,51 @@ public static class BreakdownTreeBuilder
                 fighter.Children.Add(child);
 
             nodes.Add(fighter);
+        }
+
+        return nodes;
+    }
+
+    private static List<BreakdownNode> BuildMobs(EncounterReport report)
+    {
+        long top = report.Mobs.Count > 0 ? report.Mobs[0].DamageTaken : 0;
+        var nodes = new List<BreakdownNode>();
+
+        foreach (MobStats m in report.Mobs)
+        {
+            string ttk = m.TimeToKillSeconds > 0
+                ? $"{TimeSpan.FromSeconds(m.TimeToKillSeconds):m\\:ss} to kill"
+                : "";
+            string kill = m.LastKiller is { Length: > 0 } ? $"killed by {m.LastKiller}" : "not killed";
+
+            var node = new BreakdownNode
+            {
+                Label = m.Name,
+                Sub = m.Deaths > 1 ? $"×{m.Deaths}" : "",
+                Depth = 0,
+                Kind = "top",
+                Value = m.DamageTaken,
+                ValueText = m.DamageTaken.ToString("N0"),
+                ShareText = "",
+                DetailText = string.Join(" · ", new[] { kill, ttk }.Where(s => s.Length > 0)),
+                BarFraction = top > 0 ? (double)m.DamageTaken / top : 0,
+            };
+
+            foreach ((string fighter, long dmg) in m.ByFighter)
+            {
+                node.Children.Add(new BreakdownNode
+                {
+                    Label = fighter,
+                    Depth = 1,
+                    Kind = "leaf",
+                    Value = dmg,
+                    ValueText = dmg.ToString("N0"),
+                    ShareText = m.DamageTaken > 0 ? ((double)dmg / m.DamageTaken).ToString("P0") : "",
+                    BarFraction = m.DamageTaken > 0 ? (double)dmg / m.DamageTaken : 0,
+                });
+            }
+
+            nodes.Add(node);
         }
 
         return nodes;

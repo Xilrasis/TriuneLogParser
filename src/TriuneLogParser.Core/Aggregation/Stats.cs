@@ -85,4 +85,24 @@ public sealed class EncounterReport
     public required IReadOnlyList<FighterStats> Healing { get; init; }
 
     public IReadOnlyList<string> Titles { get; init; } = Array.Empty<string>();
+
+    /// <summary>Per-target-NPC breakdown ("who killed what"), highest damage first.</summary>
+    public IReadOnlyList<MobStats> Mobs { get; init; } = Array.Empty<MobStats>();
+}
+
+/// <summary>Damage dealt to one NPC across the reported encounters.</summary>
+public sealed class MobStats
+{
+    public required string Name { get; init; }
+    public long DamageTaken { get; set; }
+    public int Deaths { get; set; }
+    public string? LastKiller { get; set; }
+    public DateTime FirstHit { get; set; } = DateTime.MaxValue;
+    public DateTime LastHit { get; set; } = DateTime.MinValue;
+
+    /// <summary>Damage into this mob per attacking fighter (pets folded into owner), highest first.</summary>
+    public List<(string Fighter, long Damage)> ByFighter { get; } = new();
+
+    public double TimeToKillSeconds =>
+        LastHit > FirstHit ? (LastHit - FirstHit).TotalSeconds : 0;
 }

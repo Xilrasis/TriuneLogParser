@@ -24,6 +24,19 @@ public static class EncounterAggregator
         double duration = 0;
         long totalDamage = 0, totalHealing = 0;
         DateTime start = DateTime.MaxValue, end = DateTime.MinValue;
+        var mobs = new Dictionary<string, MobStats>(StringComparer.OrdinalIgnoreCase);
+        var mobByFighter = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+
+        MobStats Mob(string name)
+        {
+            if (!mobs.TryGetValue(name, out MobStats? m))
+            {
+                mobs[name] = m = new MobStats { Name = name };
+                mobByFighter[name] = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return m;
+        }
 
         foreach (Encounter enc in list)
         {
@@ -37,6 +50,7 @@ public static class EncounterAggregator
                 {
                     case CombatAction.Damage:
                         totalDamage += ApplyDamage(e, Get);
+                        TrackMobDamage(e, Mob, mobByFighter);
                         break;
                     case CombatAction.Miss:
                         ApplyMiss(e, Get);
@@ -46,9 +60,26 @@ public static class EncounterAggregator
                         break;
                     case CombatAction.Death:
                         ApplyDeath(e, Get);
+                        if (e.TargetKind == EntityKind.Npc && e.Target is { } dead)
+                        {
+                            MobStats m = Mob(dead);
+                            m.Deaths++;
+                            if (e.Timestamp > m.LastHit) m.LastHit = e.Timestamp;
+                            if (e.Timestamp < m.FirstHit) m.FirstHit = e.Timestamp;
+                            if (e.Attacker is { } killer && e.AttackerKind != EntityKind.Npc)
+                                m.LastKiller = killer;
+                        }
                         break;
                 }
             }
+        }
+
+        foreach ((string name, MobStats m) in mobs)
+        {
+            m.ByFighter.AddRange(mobByFighter[name]
+                .Where(kv => kv.Value > 0)
+                .OrderByDescending(kv => kv.Value)
+                .Select(kv => (kv.Key, kv.Value)));
         }
 
         foreach (FighterStats f in fighters.Values)
@@ -73,7 +104,29 @@ public static class EncounterAggregator
             DamageTaken = Rank(f => f.DamageTaken),
             Healing = Rank(f => f.HealingDone),
             Titles = list.Select(e => e.Title).ToArray(),
+            Mobs = mobs.Values.Where(m => m.DamageTaken > 0).OrderByDescending(m => m.DamageTaken).ToList(),
         };
+    }
+
+    private static void TrackMobDamage(
+        CombatEvent e,
+        Func<string, MobStats> mob,
+        Dictionary<string, Dictionary<string, long>> mobByFighter)
+    {
+        if (e.TargetKind != EntityKind.Npc || e.Target is not { } target || e.Amount <= 0)
+            return;
+
+        MobStats m = mob(target);
+        m.DamageTaken += e.Amount;
+        if (e.Timestamp < m.FirstHit) m.FirstHit = e.Timestamp;
+        if (e.Timestamp > m.LastHit) m.LastHit = e.Timestamp;
+
+        if (e.Attacker is { } atk && e.AttackerKind is EntityKind.Player or EntityKind.Pet)
+        {
+            string fighter = e.AttackerKind == EntityKind.Pet && e.AttackerOwner is { } owner ? owner : atk;
+            var byF = mobByFighter[target];
+            byF[fighter] = byF.GetValueOrDefault(fighter) + e.Amount;
+        }
     }
 
     private static long ApplyDamage(CombatEvent e, Func<string, FighterStats> get)

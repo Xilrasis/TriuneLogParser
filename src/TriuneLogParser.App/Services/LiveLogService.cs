@@ -176,6 +176,13 @@ public sealed class LiveLogService : IDisposable
         }
     }
 
+    /// <summary>Best-guess class label for a player ("Monk / Rogue"), or "" if unknown.</summary>
+    public string ClassLabel(string fighter)
+    {
+        lock (_gate)
+            return _processor?.Classes.LabelFor(fighter) ?? "";
+    }
+
     /// <summary>The live fight if one is active, otherwise the most recent completed fight.</summary>
     public (EncounterReport? report, string? title, double seconds, bool active) CurrentOrLatest()
     {
