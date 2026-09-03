@@ -176,6 +176,24 @@ public sealed class LiveLogService : IDisposable
         }
     }
 
+    /// <summary>The live fight if one is active, otherwise the most recent completed fight.</summary>
+    public (EncounterReport? report, string? title, double seconds, bool active) CurrentOrLatest()
+    {
+        lock (_gate)
+        {
+            if (_processor is null)
+                return (null, null, 0, false);
+
+            Encounter? enc = _processor.CurrentEncounter
+                             ?? (_processor.ClosedEncounters.Count > 0 ? _processor.ClosedEncounters[^1] : null);
+            if (enc is null)
+                return (null, null, 0, false);
+
+            EncounterReport r = EncounterAggregator.Report(enc);
+            return (r, enc.Title, r.DurationSeconds, enc.IsActive);
+        }
+    }
+
     private string? LastZone()
     {
         IReadOnlyList<ZoneChange> zones = _processor!.ZoneChanges;

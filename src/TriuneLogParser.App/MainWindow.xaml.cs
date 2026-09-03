@@ -18,6 +18,7 @@ public partial class MainWindow : Window
 
         _vm.SelectionShouldFollow += FollowSelection;
         Closed += (_, _) => _vm.Dispose();
+        Loaded += (_, _) => _vm.OnShellReady();
     }
 
     private void EncounterList_SelectionChanged(object sender, SelectionChangedEventArgs e)

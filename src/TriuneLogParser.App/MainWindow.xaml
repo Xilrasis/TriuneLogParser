@@ -32,7 +32,11 @@
                     <Button Content="Reload (F5)" Command="{Binding ReloadCommand}" Margin="8,0,0,0" />
                 </StackPanel>
 
-                <ToggleButton Grid.Column="1" Content="Follow live" IsChecked="{Binding AutoFollow}" Margin="16,0,0,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
+                    <ToggleButton Content="Follow live" IsChecked="{Binding AutoFollow}" />
+                    <ToggleButton Content="Overlay" IsChecked="{Binding OverlayVisible}" Margin="8,0,0,0" />
+                    <Button Content="{Binding OverlayClickThroughText}" Command="{Binding ToggleClickThroughCommand}" Margin="8,0,0,0" />
+                </StackPanel>
 
                 <TextBlock Grid.Column="2" Text="{Binding ZoneText}" Style="{StaticResource Dim}"
                            VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" />

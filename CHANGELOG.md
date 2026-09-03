@@ -20,6 +20,11 @@ feature-scoped; newest first. Format loosely follows
   shows its share of the parent. Damage-done / damage-taken / healing views.
 - Encounter splitting reworked: per-pull by default with a short re-engage window that
   merges rapid chain-pulls, a 10-minute cap on non-stop grinds, and a session mode.
+- **Always-on-top overlay (Phase 3).** Borderless, draggable, resizable damage-meter
+  window that stays above the game. Shows ranked bars for the live fight (falling back
+  to the last one), with metric selection (DPS / damage / damage+heals / damage taken /
+  healing), adjustable opacity, UI scale and row count, and a click-through mode
+  toggled from the main window. Position and preferences persist.
 
 ### Known issues
 - Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned

@@ -8,6 +8,8 @@
         <app:EnumEqualsConverter x:Key="EnumEquals" />
         <app:IndentMarginConverter x:Key="IndentMargin" />
         <app:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
+        <app:FractionStarConverter x:Key="FractionStar" />
+        <app:FractionStarConverter x:Key="FractionRestStar" Rest="True" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
         <!-- palette -->

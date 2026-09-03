@@ -22,7 +22,10 @@ public sealed class AppSettings
     /// <summary>When following several characters, merge their output into one parse.</summary>
     public bool MergeFollowedCharacters { get; set; }
 
-    /// <summary>Free-form bag for UI-layer settings (overlay position, opacity, ...).</summary>
+    /// <summary>Always-on-top damage-meter overlay preferences.</summary>
+    public OverlaySettings Overlay { get; set; } = new();
+
+    /// <summary>Free-form bag for forward/backward-compatible UI settings.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement> Extra { get; set; } = new();
 

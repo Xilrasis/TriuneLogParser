@@ -23,8 +23,8 @@ running the RoF2 client whose log wording is different enough that mainstream pa
 - **Encounter splitting.** EQLogParser-style fight detection that groups multi-mob
   pulls into one encounter and closes fights on death or inactivity.
 - **Time-range grouping.** Merge any set of encounters into one aggregate view.
-- **Always-on-top overlay** _(planned, Phase 3)_ — damage-meter bars you can pin over
-  the game.
+- **Always-on-top overlay** — draggable damage-meter bars pinned over the game, with a
+  click-through mode.
 
 ## Requirements
 
@@ -81,7 +81,7 @@ content it hasn't seen.
 |---|---|
 | 1 | ✅ Parsing engine, encounter builder, aggregation, `triuneparse` CLI |
 | 2 | ✅ WPF app: first-run EQ-folder picker, live tail, encounter browser, breakdown tree |
-| 3 | Always-on-top overlay with configurable damage-meter bars |
+| 3 | ✅ Always-on-top overlay with configurable damage-meter bars |
 | 4 | Class inference, encounter export, session history, per-mob views |
 
 See [CHANGELOG.md](CHANGELOG.md) for what has landed.

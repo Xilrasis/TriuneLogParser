@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using System.Windows.Threading;
+using TriuneLogParser.App.Overlay;
 using TriuneLogParser.App.Services;
 using TriuneLogParser.Core.Aggregation;
 using TriuneLogParser.Core.Config;
@@ -23,6 +24,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IReadOnlyList<int> _selectedIds = Array.Empty<int>();
     private string _breakdownHeader = "Select an encounter";
 
+    private readonly OverlayViewModel _overlayVm = new();
+    private OverlayWindow? _overlayWindow;
+    private bool _overlayVisible;
+
     public MainViewModel()
     {
         _settings = AppSettings.Load();
@@ -30,16 +35,78 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             IdleTimeout = TimeSpan.FromSeconds(Math.Clamp(_settings.IdleTimeoutSeconds, 5, 600)),
         });
+        _overlayVm.Settings = _settings.Overlay.Clamp();
 
         ChangeFolderCommand = new RelayCommand(ChangeFolder);
         FollowLiveCommand = new RelayCommand(() => { AutoFollow = true; Refresh(); });
         ReloadCommand = new RelayCommand(ReloadCurrent, () => SelectedCharacter is not null);
+        ToggleOverlayCommand = new RelayCommand(() => OverlayVisible = !OverlayVisible);
+        ToggleClickThroughCommand = new RelayCommand(ToggleOverlayClickThrough, () => OverlayVisible);
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(750) };
         _timer.Tick += (_, _) => { _service.Tick(DateTime.Now); Refresh(); };
         _timer.Start();
 
         RefreshCharacters();
+    }
+
+    /// <summary>Called by the shell once its window is up, so child windows have an owner context.</summary>
+    public void OnShellReady()
+    {
+        if (_settings.Overlay.Shown)
+            OverlayVisible = true;
+    }
+
+    // ---- overlay -----------------------------------------------------------
+
+    public ICommand ToggleOverlayCommand { get; }
+    public ICommand ToggleClickThroughCommand { get; }
+
+    public bool OverlayVisible
+    {
+        get => _overlayVisible;
+        set
+        {
+            if (!Set(ref _overlayVisible, value))
+                return;
+
+            if (value)
+            {
+                _overlayWindow ??= new OverlayWindow(_overlayVm, PersistOverlay);
+                _overlayWindow.Show();
+                UpdateOverlay();
+            }
+            else
+            {
+                _overlayWindow?.Hide();
+            }
+
+            _settings.Overlay.Shown = value;
+            _settings.Save();
+            Raise(nameof(OverlayClickThroughText));
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    public bool OverlayClickThrough => _settings.Overlay.ClickThrough;
+    public string OverlayClickThroughText => _settings.Overlay.ClickThrough ? "Overlay: click-through" : "Overlay: interactive";
+
+    private void ToggleOverlayClickThrough()
+    {
+        bool on = !_settings.Overlay.ClickThrough;
+        _overlayWindow?.SetClickThrough(on);
+        Raise(nameof(OverlayClickThrough));
+        Raise(nameof(OverlayClickThroughText));
+    }
+
+    private void PersistOverlay() => _settings.Save();
+
+    private void UpdateOverlay()
+    {
+        if (!_overlayVisible)
+            return;
+        (EncounterReport? report, string? title, double seconds, bool active) = _service.CurrentOrLatest();
+        _overlayVm.Update(report, title, seconds, active);
     }
 
     // ---- folder / character selection -----------------------------------------
@@ -162,6 +229,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
 
         RefreshBreakdown();
+        UpdateOverlay();
     }
 
     /// <summary>Raised when auto-follow wants the view to select an encounter row.</summary>
@@ -306,6 +374,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _timer.Stop();
+        if (_overlayWindow is { } w)
+        {
+            w.PersistNow();
+            w.ForceClose();
+        }
+        _settings.Save();
         _service.Dispose();
     }
 }

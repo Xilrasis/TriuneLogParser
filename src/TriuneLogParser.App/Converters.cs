@@ -24,6 +24,22 @@ public sealed class MultiplyConverter : IMultiValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>Fraction (0..1) → a star <see cref="System.Windows.GridLength"/> for a proportional bar column.</summary>
+public sealed class FractionStarConverter : IValueConverter
+{
+    public bool Rest { get; set; }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        double f = value is double d && !double.IsNaN(d) ? Math.Clamp(d, 0, 1) : 0;
+        double weight = Rest ? 1 - f : f;
+        return new System.Windows.GridLength(Math.Max(0.0001, weight), System.Windows.GridUnitType.Star);
+    }
+
+    public object ConvertBack(object value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Depth (int) → left Thickness for tree indentation.</summary>
 public sealed class IndentMarginConverter : IValueConverter
 {
