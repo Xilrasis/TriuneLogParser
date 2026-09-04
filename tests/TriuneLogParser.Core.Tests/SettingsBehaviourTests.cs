@@ -68,6 +68,24 @@ public class SettingsBehaviourTests
     }
 
     [Fact]
+    public void One_word_boss_that_kills_players_is_still_a_mob()
+    {
+        string[] lines =
+        {
+            // Boss kills raiders before we ever hit it...
+            L("21:00:00", "Personality has been slain by Zebuxoruk!"),
+            L("21:00:02", "You have been slain by Zebuxoruk!"),
+            // ...then we engage it. It must be classified NPC, not a player.
+            L("21:00:40", "You crush Zebuxoruk for 4000 points of damage."),
+            L("21:02:00", "Personality hits Zebuxoruk for 9000 points of damage."),
+            L("21:02:30", "Zebuxoruk has been slain by Personality!"),
+        };
+
+        Encounter enc = Assert.Single(Build(lines, EncounterOptions.ForRestPeriod(30)));
+        Assert.Contains("Zebuxoruk", enc.NpcsKilled);
+    }
+
+    [Fact]
     public void Log_archiver_renames_with_timestamp()
     {
         string dir = Path.Combine(Path.GetTempPath(), "tlp-arch-" + Guid.NewGuid().ToString("N"));

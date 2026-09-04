@@ -23,6 +23,14 @@ public sealed class RosterTracker
     private readonly Dictionary<string, EntityKind> _kinds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _verifiedPlayers = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Names a verified player has hit, that have hit a verified player, or that carry
+    /// an NPC article. This is hard evidence and outranks the softer player heuristics
+    /// (single-token proper name, "slain by &lt;name&gt;") — a raid boss that kills
+    /// players and has a one-word name must not be classified as a player.
+    /// </summary>
+    private readonly HashSet<string> _confirmedNpc = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>The logging character, if known (from the log filename).</summary>
     public string? Self { get; }
 
@@ -120,7 +128,7 @@ public sealed class RosterTracker
 
     private void MarkPlayer(string name)
     {
-        if (StartsWithArticle(name))
+        if (StartsWithArticle(name) || _confirmedNpc.Contains(name))
             return;
         _verifiedPlayers.Add(name);
         _kinds[name] = EntityKind.Player;
@@ -128,8 +136,10 @@ public sealed class RosterTracker
 
     private void MarkNpc(string name)
     {
-        if (_pets.IsPet(name) || _verifiedPlayers.Contains(name))
+        if (_pets.IsPet(name) || name.Equals(Self, StringComparison.OrdinalIgnoreCase))
             return;
+        _confirmedNpc.Add(name);
+        _verifiedPlayers.Remove(name);
         _kinds[name] = EntityKind.Npc;
     }
 

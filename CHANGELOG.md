@@ -56,6 +56,11 @@ feature-scoped; newest first. Format loosely follows
   the fight is held open through the corpse run (idle gap + release-to-bind zoning +
   run back) for up to 3 minutes so a phased event stays one encounter. `"an Instanced
   Version of the zone"` is no longer treated as a zone change.
+- A one-word-named raid boss that kills players (`<player> has been slain by <Boss>!`)
+  is no longer misclassified as a player — its damage was being dropped as friendly
+  fire and it never appeared as a mob. Hard evidence (a known player hit it) now
+  outranks the name/kill heuristics. On the reference raid log this alone collapses the
+  Zebuxoruk event from five encounters (built around the adds, boss missing) to two.
 - Rest period 0 splits more cleanly — a mob that only swung at you once no longer
   holds the per-pull encounter open until it dies.
 

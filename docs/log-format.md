@@ -64,9 +64,13 @@ type becomes a pet owned by `{Player}` and its damage folds into that player as 
 **Corpse-run bridge.** After `You have been slain by <mob>!` (logging character), the
 open fight is *suspended* rather than closed for up to 3 minutes: the idle gap while
 you lie dead, the zone to your bind point, and the zone back into the instance don't
-split the encounter. Combat resuming within the window revives it. This keeps a phased
-raid event (bosses dying at different times, wipes and recoveries) as one encounter at
-any non-zero rest period.
+split the encounter. Combat resuming within the window revives it.
+
+This keeps a phased raid event (era bosses dying at different times) as one encounter
+at any non-zero rest period. A wipe where the raid releases to bind, leaves the zone,
+and takes minutes to run back **does** start a new encounter once the bridge window
+(3 min) lapses — an accepted artifact. Rest period 0 disables the bridge (strict
+per-pull). Session mode caps an unbroken encounter at 20 minutes.
 
 ### Deaths / fight end
 | Form | Attacker | Target |
