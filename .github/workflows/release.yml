@@ -17,6 +17,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Version from tag
+        id: ver
+        shell: bash
+        run: echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Test
         run: dotnet test TriuneLogParser.sln -c Release
 
@@ -27,6 +32,7 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.v }}
           -o dist/cli
 
       - name: Publish desktop app (standalone single-file win-x64)
@@ -36,6 +42,7 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.v }}
           -o dist/app
 
       - name: Stage release assets
@@ -45,6 +52,10 @@ jobs:
           New-Item -ItemType Directory -Force out | Out-Null
           Copy-Item dist/app/TriuneLogParser.exe "out/TriuneLogParser-$tag-win-x64.exe"
           Copy-Item dist/cli/triuneparse.exe    "out/triuneparse-$tag-win-x64.exe"
+          Copy-Item CHANGELOG.md                "out/CHANGELOG.md"
+          Get-FileHash out/*.exe -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
+            Set-Content -Encoding ascii out/SHA256SUMS.txt
           Get-ChildItem out
 
       - name: Create GitHub Release
@@ -52,10 +63,15 @@ jobs:
         with:
           files: out/*
           generate_release_notes: true
+          prerelease: true
           body: |
             Standalone Windows x64 builds — no .NET install required.
 
             - `TriuneLogParser-*.exe` — desktop app (parser + overlay)
             - `triuneparse-*.exe` — command-line parser
+            - `SHA256SUMS.txt` — verify with `Get-FileHash <file> -Algorithm SHA256`
+
+            The exe is unsigned, so Windows SmartScreen shows an "unrecognized app"
+            prompt on first run — choose **More info → Run anyway**.
 
             See [CHANGELOG.md](CHANGELOG.md) for what changed.

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using TriuneLogParser.Core;
 using TriuneLogParser.Core.Aggregation;
+using TriuneLogParser.Core.Config;
 using TriuneLogParser.Core.Encounters;
 using TriuneLogParser.Core.Logging;
 using TriuneLogParser.Core.Model;
@@ -22,6 +23,9 @@ if (args.Length == 0 || args.Contains("-h") || args.Contains("--help"))
                              style. Overrides --idle when given.
           --top <n>          Show at most n source buckets per fighter (default 6)
           --unparsed         List distinct damage-like lines the grammar missed
+          --markers <file>   Split-marker JSON to apply (default: the saved sidecar for
+                             this character, if any)
+          --no-markers       Ignore saved split markers
         """);
     return args.Length == 0 ? 1 : 0;
 }
@@ -45,13 +49,17 @@ var options = rest >= 0
     : new EncounterOptions { IdleTimeout = TimeSpan.FromSeconds(idle) };
 string? character = LogFileTailer.TryExtractCharacterName(path);
 
+IReadOnlyList<EncounterMarker> markers = LoadMarkers();
+if (markers.Count > 0)
+    Console.Error.WriteLine($"Applying {markers.Count} saved split marker(s).");
+
 if (follow)
 {
-    await FollowAsync(path, character, options, json, top);
+    await FollowAsync(path, character, options, markers, json, top);
     return 0;
 }
 
-var processor = new CombatLogProcessor(character, options);
+var processor = new CombatLogProcessor(character, options, markers: markers);
 int lineNo = 0;
 foreach (string line in File.ReadLines(path))
     processor.AddLine(line, ++lineNo);
@@ -74,9 +82,33 @@ int OptInt(string name, int fallback)
     return i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out int v) ? v : fallback;
 }
 
-static async Task FollowAsync(string path, string? character, EncounterOptions options, bool json, int top)
+string? OptStr(string name)
 {
-    var processor = new CombatLogProcessor(character, options, streaming: true);
+    int i = Array.IndexOf(args, name);
+    return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+}
+
+IReadOnlyList<EncounterMarker> LoadMarkers()
+{
+    if (args.Contains("--no-markers"))
+        return Array.Empty<EncounterMarker>();
+    try
+    {
+        string? file = OptStr("--markers");
+        return file is not null ? MarkerStore.Load(file).Markers : MarkerStore.LoadForLog(path);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Could not load split markers: {ex.Message}");
+        return Array.Empty<EncounterMarker>();
+    }
+}
+
+static async Task FollowAsync(
+    string path, string? character, EncounterOptions options,
+    IReadOnlyList<EncounterMarker> markers, bool json, int top)
+{
+    var processor = new CombatLogProcessor(character, options, streaming: true, markers);
     var tailer = new LogFileTailer(path);
     int printed = 0;
 

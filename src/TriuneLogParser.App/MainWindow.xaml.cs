@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using TriuneLogParser.App.ViewModels;
 
 namespace TriuneLogParser.App;
@@ -19,8 +21,52 @@ public partial class MainWindow : Window
         _vm.SelectionShouldFollow += FollowSelection;
         _vm.RequestSavePath = SuggestSavePath;
         _vm.RequestSettingsDialog = ShowSettingsDialog;
-        Closed += (_, _) => _vm.Dispose();
+        Closed += (_, _) => { UnregisterSplitHotkey(); _vm.Dispose(); };
         Loaded += (_, _) => _vm.OnShellReady();
+        SourceInitialized += (_, _) => RegisterSplitHotkey();
+    }
+
+    // ---- global "split fight" hotkey (Ctrl+Alt+S), works while the game has focus ----
+
+    private const int WmHotkey = 0x0312;
+    private const int SplitHotkeyId = 0xB01D;
+    private const uint ModAlt = 0x0001, ModControl = 0x0002, ModNoRepeat = 0x4000;
+    private const uint VkS = 0x53;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    private HwndSource? _source;
+
+    private void RegisterSplitHotkey()
+    {
+        _source = (HwndSource?)PresentationSource.FromVisual(this);
+        if (_source is null)
+            return;
+        _source.AddHook(WndProc);
+        RegisterHotKey(_source.Handle, SplitHotkeyId, ModControl | ModAlt | ModNoRepeat, VkS);
+    }
+
+    private void UnregisterSplitHotkey()
+    {
+        if (_source is null)
+            return;
+        UnregisterHotKey(_source.Handle, SplitHotkeyId);
+        _source.RemoveHook(WndProc);
+        _source = null;
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmHotkey && wParam.ToInt32() == SplitHotkeyId)
+        {
+            _vm.SplitFight();
+            handled = true;
+        }
+        return IntPtr.Zero;
     }
 
     private (bool, bool, bool, bool) ShowSettingsDialog(TriuneLogParser.Core.Config.AppSettings settings)

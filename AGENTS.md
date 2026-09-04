@@ -61,6 +61,20 @@ work here. The authoritative description of the log grammar we support lives in
 - Keep changes scoped; note follow-up ideas in `CHANGELOG.md`'s Unreleased section or
   as GitHub issues rather than expanding the current change.
 
+## Cutting a release
+
+Binaries are **never committed** — they ship as GitHub Release assets built by CI from
+a version tag. To release:
+
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [x.y.z] - <date>` and add a fresh
+   empty `## [Unreleased]` above it.
+2. Bump `<Version>` in `Directory.Build.props` to `x.y.z` (dev-build fallback; CI passes
+   the real version from the tag).
+3. Merge to `main`, then from `main`: `git tag vx.y.z && git push origin vx.y.z`.
+4. `.github/workflows/release.yml` runs the tests, publishes both single-file win-x64
+   exes with `-p:Version=<tag>`, and creates the Release with `SHA256SUMS.txt` and
+   auto-generated notes. Releases are marked pre-release while on `0.x`.
+
 ## Layout
 
 | Path | Purpose |

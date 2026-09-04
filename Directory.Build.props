@@ -8,6 +8,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <Authors>TriuneLogParser contributors</Authors>
     <Product>TriuneLogParser</Product>
-    <Version>0.1.0</Version>
+    <!-- Dev-build fallback; CI release builds pass -p:Version=<tag> from the git tag. -->
+    <Version>0.2.0</Version>
   </PropertyGroup>
 </Project>

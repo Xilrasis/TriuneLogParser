@@ -12,14 +12,16 @@ public partial class OverlayWindow : Window
 {
     private readonly OverlayViewModel _vm;
     private readonly Action _persist;
+    private readonly Action _onSplit;
     private bool _loading = true;
     private bool _ready;
     private bool _forceClose;
 
-    public OverlayWindow(OverlayViewModel vm, Action persist)
+    public OverlayWindow(OverlayViewModel vm, Action persist, Action onSplit)
     {
         _vm = vm;
         _persist = persist;
+        _onSplit = onSplit;
         InitializeComponent();
         DataContext = _vm;
 
@@ -67,6 +69,8 @@ public partial class OverlayWindow : Window
             : Visibility.Visible;
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
+
+    private void Split_Click(object sender, RoutedEventArgs e) => _onSplit();
 
     private void MetricPrev_Click(object sender, RoutedEventArgs e) { _vm.CycleMetric(-1); _persist(); }
     private void MetricNext_Click(object sender, RoutedEventArgs e) { _vm.CycleMetric(1); _persist(); }

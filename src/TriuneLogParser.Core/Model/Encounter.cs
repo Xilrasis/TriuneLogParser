@@ -61,4 +61,7 @@ public enum EncounterEndReason
     ZoneChange,
     TimeCap,
     LogEnd,
+
+    /// <summary>The user pressed "split fight" (live), or a saved split marker for this moment.</summary>
+    Manual,
 }

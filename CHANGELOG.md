@@ -7,6 +7,8 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-04
+
 ### Added
 - **WPF desktop app (Phase 2).** First-run prompt for the EverQuest folder (persisted
   to `%AppData%/TriuneLogParser/settings.json`), automatic discovery of character log
@@ -18,11 +20,9 @@ feature-scoped; newest first. Format loosely follows
   single "Melee" line, each pet collapses into one line, and skill attacks
   (kick, strike, backstab, frenzy, bash, punch) and spells stay separate — every row
   shows its share of the parent. Damage-done / damage-taken / healing views.
-- Encounter splitting reworked: per-pull by default with a short re-engage window that
-  merges rapid chain-pulls, a 10-minute cap on non-stop grinds, and a session mode.
 - **Always-on-top overlay (Phase 3).** Borderless, draggable, resizable damage-meter
-  window that stays above the game. Shows ranked bars for the live fight (falling back
-  to the last one), with metric selection (DPS / damage / damage+heals / damage taken /
+  window that stays above the game. Ranked bars for the live fight (falling back to the
+  last one), with metric selection (DPS / damage / damage+heals / damage taken /
   healing), adjustable opacity, UI scale and row count, and a click-through mode
   toggled from the main window. Position and preferences persist.
 - **Per-mob view, class inference and export (Phase 4).**
@@ -31,15 +31,28 @@ feature-scoped; newest first. Format loosely follows
   - **Class inference** — signature abilities/spells map each player to its class(es)
     (multiclass-aware, e.g. "Monk / Enchanter / Necromancer"), shown on the fighter row.
   - **Export** a selected encounter (or range) to CSV or JSON.
-  - `triuneparse --table` now prints a per-mob summary.
-  - `triuneparse --rest <seconds>` selects the rest-period model (0 = per-pull,
-    >0 = session/event) instead of only a raw idle timeout.
+  - `triuneparse --table` prints a per-mob summary; `triuneparse --rest <seconds>`
+    selects the rest-period model (0 = per-pull, >0 = session/event).
+- **Settings** dialog: configurable **rest period between fights** (0–5 min; 0 = one
+  encounter per pull), **retroactive parse depth** on start (active-only / 30 min / 1 /
+  2 / 6 / 24 h), and an optional **log auto-archive** that renames the log aside with a
+  timestamp once it passes a size (default 200 MB, off).
+- **Force encounter split.** A "Split fight" button (main window and overlay) and a
+  global **Ctrl+Alt+S** hotkey end the encounter in progress immediately; the next
+  combat line starts a fresh one, with the re-engage and corpse-run merges suppressed
+  so the boundary lands exactly where asked. The split is saved as a marker beside the
+  log (`%AppData%/TriuneLogParser/markers/<character>.json`), keyed to the character so
+  it survives log archiving — re-parsing (retro parse, restart, `triuneparse`)
+  reproduces the same boundaries. `triuneparse --markers <file>` / `--no-markers`
+  control it from the CLI.
+- Overlay rows show *name · total (%) · DPS*, larger and shadowed for contrast, muted
+  bars, window auto-sizes to the row count. Breakdown rows match: indented sub-entries,
+  bold expand arrows, a narrow proportional bar.
 
 ### Fixed
-- Swarm / temporary pets (`Player`s Animated Corpse hits …`) are now parsed and
-  credited to the owning player instead of being dropped as unknown NPCs. Damage the
-  pet takes folds into the owner too, and a swarm pet expiring no longer counts as a
-  player death.
+- Swarm / temporary pets (`Player`s Animated Corpse hits …`) are parsed and credited to
+  the owning player instead of dropped as unknown NPCs. Damage the pet takes folds into
+  the owner too, and a swarm pet expiring no longer counts as a player death.
 - Breakdown percentage bars were always ~50% wide — they now reflect each row's share.
 - Collapsing a breakdown row no longer snaps back open on the next refresh.
 - Breakdown ability/entity names were near-black on the dark rows; now readable.
@@ -47,9 +60,8 @@ feature-scoped; newest first. Format loosely follows
   `Namescorpse` form) are credited to the underlying player or mob instead of spawning
   a phantom `Namescorpse` combatant.
 - Grammar coverage: damage-absorb / rune / Spellshield lines and `You have taken N
-  points of damage` are now recognised (previously counted as misses), and every
-  damage rule accepts the singular "point of damage". Reference raid log goes from
-  ~98% to 100% coverage.
+  points of damage` are now recognised (previously counted as misses), and every damage
+  rule accepts the singular "point of damage". Both reference logs reach 100% coverage.
 - Names with trailing or doubled spaces (`Zebuxoruk `, `Emperor  Ssraeshza`) are
   normalised so one entity isn't split in two.
 - Raid encounters no longer fragment on every death: after the logging character dies,
@@ -59,24 +71,18 @@ feature-scoped; newest first. Format loosely follows
 - A one-word-named raid boss that kills players (`<player> has been slain by <Boss>!`)
   is no longer misclassified as a player — its damage was being dropped as friendly
   fire and it never appeared as a mob. Hard evidence (a known player hit it) now
-  outranks the name/kill heuristics. On the reference raid log this alone collapses the
-  Zebuxoruk event from five encounters (built around the adds, boss missing) to two.
-- Rest period 0 splits more cleanly — a mob that only swung at you once no longer
-  holds the per-pull encounter open until it dies.
-
-### Added
-- **Settings** dialog: configurable **rest period between fights** (0–5 min; 0 = one
-  encounter per pull), **retroactive parse depth** on start (active-only / 30 min / 1 /
-  2 / 6 / 24 h), and an optional **log auto-archive** that renames the log aside with a
-  timestamp once it passes a size (default 200 MB, off).
-- Overlay rows reworked to *name · total (%) · DPS*, larger and shadowed for contrast,
-  muted bars, and the window now auto-sizes to the number of rows.
-- Breakdown rows reworked to match: indented sub-entries, smaller/bolder expand arrows,
-  a narrow proportional bar, name+info left / total+% centre / DPS right.
+  outranks the name/kill heuristics; on the reference raid log this collapses the
+  Zebuxoruk event from five encounters (boss missing) to one or two.
+- Rest period 0 splits more cleanly — a mob that only swung at you once no longer holds
+  the per-pull encounter open until it dies.
 
 ### Known issues
 - Numbers in the breakdown are left-aligned in fixed columns rather than right-aligned
   (a `TextAlignment="Right"` rendering bug on some Windows 11 builds).
+
+## [0.1.0] - 2026-09-03
+
+### Added
 - Project scaffold: solution, `Core` parsing library, `triuneparse` CLI, xUnit test
   project, CI + release GitHub Actions workflows.
 - Rule-driven log parser for the Project Triune log grammar: self/other melee hits and
@@ -90,5 +96,4 @@ feature-scoped; newest first. Format loosely follows
   configurable idle timeout, and death/zone fight-end detection.
 - Aggregation: per-player, per-source damage / damage-taken / healing rollups, with
   time-range grouping across multiple encounters.
-- `triuneparse` CLI: parse a log file or follow it live, output a summary table or
-  JSON.
+- `triuneparse` CLI: parse a log file or follow it live, output a summary table or JSON.

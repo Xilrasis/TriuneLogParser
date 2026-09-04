@@ -1,5 +1,6 @@
 using TriuneLogParser.Core;
 using TriuneLogParser.Core.Aggregation;
+using TriuneLogParser.Core.Config;
 using TriuneLogParser.Core.Encounters;
 using TriuneLogParser.Core.Logging;
 using TriuneLogParser.Core.Model;
@@ -56,9 +57,11 @@ public sealed class LiveLogService : IDisposable
         var cts = new CancellationTokenSource();
         long gen = Interlocked.Increment(ref _generation);
 
+        IReadOnlyList<EncounterMarker> markers = SafeLoadMarkers(logPath);
+
         lock (_gate)
         {
-            _processor = new CombatLogProcessor(character, _options, streaming: true);
+            _processor = new CombatLogProcessor(character, _options, streaming: true, markers);
             _summaryCache.Clear();
             _loading = true;
             Character = character;
@@ -162,6 +165,42 @@ public sealed class LiveLogService : IDisposable
     {
         lock (_gate)
             _processor?.Advance(now);
+    }
+
+    /// <summary>True when there's a live parse with at least one event — a split can be placed.</summary>
+    public bool CanSplit
+    {
+        get { lock (_gate) return _processor?.LastEventTimestamp is not null; }
+    }
+
+    /// <summary>
+    /// End the current encounter now and persist a split marker beside the log, so
+    /// re-parses reproduce the boundary. No-op if nothing has been parsed yet.
+    /// </summary>
+    public void ForceSplit()
+    {
+        DateTime? at;
+        string? logPath;
+        lock (_gate)
+        {
+            at = _processor?.ForceSplit();
+            logPath = LogPath;
+        }
+
+        if (at is null || logPath is null)
+            return;
+
+        try { MarkerStore.AddSplit(logPath, at.Value); }
+        catch (Exception ex) { Notice?.Invoke($"Split saved in memory only: {ex.Message}"); }
+
+        Notice?.Invoke($"Encounter split at {at:HH:mm:ss}");
+        Changed?.Invoke();
+    }
+
+    private static IReadOnlyList<EncounterMarker> SafeLoadMarkers(string logPath)
+    {
+        try { return MarkerStore.LoadForLog(logPath); }
+        catch { return Array.Empty<EncounterMarker>(); }
     }
 
     public LiveSnapshot GetSnapshot()

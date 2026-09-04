@@ -88,6 +88,9 @@ public sealed class EncounterBuilder
     /// <summary>Fights are held open (idle / zone) until this time after the logging character dies.</summary>
     private DateTime _recoveryUntil = DateTime.MinValue;
 
+    /// <summary>Set by <see cref="ForceSplit"/>: the next engage must start a brand-new fight.</summary>
+    private bool _splitBarrier;
+
     private int _nextId = 1;
     private string? _zone;
 
@@ -121,10 +124,11 @@ public sealed class EncounterBuilder
     public IReadOnlyList<Encounter> Completed => _completed;
     public Encounter? Current => _current;
 
-    /// <summary>One-shot build over a full event list (+ optional zone changes).</summary>
+    /// <summary>One-shot build over a full event list (+ optional zone changes / split markers).</summary>
     public IReadOnlyList<Encounter> BuildAll(
         IEnumerable<CombatEvent> events,
-        IEnumerable<ZoneChange>? zoneChanges = null)
+        IEnumerable<ZoneChange>? zoneChanges = null,
+        IEnumerable<DateTime>? splitPoints = null)
     {
         var ordered = events.OrderBy(e => e.Timestamp).ThenBy(e => e.LineNumber).ToList();
 
@@ -135,12 +139,17 @@ public sealed class EncounterBuilder
         // Pass 2: walk the timeline.
         var zones = (zoneChanges ?? Enumerable.Empty<ZoneChange>())
             .OrderBy(z => z.Timestamp).ToList();
-        int zi = 0;
+        var splits = (splitPoints ?? Enumerable.Empty<DateTime>()).OrderBy(t => t).ToList();
+        int zi = 0, si = 0;
 
         foreach (CombatEvent e in ordered)
         {
             while (zi < zones.Count && zones[zi].Timestamp <= e.Timestamp)
                 HandleZone(zones[zi++]);
+
+            // A split marker takes effect before the first event at or after its time.
+            while (si < splits.Count && splits[si] <= e.Timestamp)
+                ForceSplit(splits[si++]);
 
             Advance(e.Timestamp);
             Handle(e);
@@ -280,6 +289,12 @@ public sealed class EncounterBuilder
         if (!isEngage)
             return;
 
+        if (_splitBarrier)
+        {
+            _splitBarrier = false;
+            _current ??= StartEncounter(e.Timestamp);
+        }
+
         _current ??= ResumeSuspended(e.Timestamp) ?? ReopenRecent(e.Timestamp) ?? StartEncounter(e.Timestamp);
 
         string? npc = targetNpc ? e.Target : attackerNpc ? e.Attacker : null;
@@ -365,6 +380,25 @@ public sealed class EncounterBuilder
             LastActivity = start,
             Zone = _zone,
         };
+    }
+
+    /// <summary>
+    /// End the fight in progress right now (user "split fight" button, or a saved split
+    /// marker). The next engage always starts a fresh encounter — the re-engage and
+    /// corpse-run bridges are cancelled so the boundary is exactly where asked.
+    /// </summary>
+    public void ForceSplit(DateTime at)
+    {
+        _recoveryUntil = DateTime.MinValue;
+        FlushSuspended();
+
+        if (_current != null)
+        {
+            DateTime end = at < _current.LastActivity ? _current.LastActivity : at;
+            Close(EncounterEndReason.Manual, end);
+        }
+
+        _splitBarrier = true;
     }
 
     public void Finish()

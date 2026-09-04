@@ -158,7 +158,35 @@ public sealed class LogFileTailer : IDisposable
     {
         string rest = StripPrefix(path);
         int idx = rest.IndexOf('_');
-        return idx > 0 && idx < rest.Length - 1 ? rest[(idx + 1)..] : null;
+        if (idx <= 0 || idx >= rest.Length - 1)
+            return null;
+        return StripArchiveStamp(rest[(idx + 1)..]);
+    }
+
+    /// <summary>
+    /// A stable "which character's log is this" key, unchanged by log archiving:
+    /// <c>&lt;Character&gt;_&lt;server&gt;</c>, or the bare file stem if it isn't an eqlog name.
+    /// </summary>
+    public static string LogIdentity(string path)
+    {
+        string? c = TryExtractCharacterName(path);
+        string? s = TryExtractServerName(path);
+        if (c is not null && s is not null)
+            return $"{c}_{s}";
+        return StripArchiveStamp(System.IO.Path.GetFileNameWithoutExtension(path));
+    }
+
+    // The archiver renames "<stem>.txt" to "<stem>.<yyyyMMdd-HHmmss>[-n].txt"; drop that
+    // suffix so an archived file resolves to the same identity as the live one.
+    private static string StripArchiveStamp(string s)
+    {
+        int dot = s.LastIndexOf('.');
+        if (dot < 0)
+            return s;
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            s[(dot + 1)..], @"^\d{8}-\d{6}(-\d+)?$")
+            ? s[..dot]
+            : s;
     }
 
     private static string StripPrefix(string path)

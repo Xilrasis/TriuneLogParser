@@ -41,6 +41,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ToggleOverlayCommand = new RelayCommand(() => OverlayVisible = !OverlayVisible);
         ToggleClickThroughCommand = new RelayCommand(ToggleOverlayClickThrough, () => OverlayVisible);
         SettingsCommand = new RelayCommand(OpenSettings);
+        SplitFightCommand = new RelayCommand(SplitFight, () => _service.CanSplit);
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(750) };
         _timer.Tick += (_, _) => { _service.Tick(DateTime.Now); Refresh(); };
@@ -50,6 +51,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     public ICommand SettingsCommand { get; }
+    public ICommand SplitFightCommand { get; }
+
+    /// <summary>
+    /// End the current encounter now; the next combat line starts a fresh one. A marker
+    /// is saved beside the log so re-parses reproduce the split. Bound to a button and a
+    /// global hotkey (Ctrl+Alt+S).
+    /// </summary>
+    public void SplitFight()
+    {
+        _service.ForceSplit();
+        Refresh();
+    }
 
     /// <summary>Raised so the shell can show the modal settings dialog.</summary>
     public Func<AppSettings, (bool saved, bool restChanged, bool retroChanged, bool folderChanged)>? RequestSettingsDialog;
@@ -105,7 +118,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
             if (value)
             {
-                _overlayWindow ??= new OverlayWindow(_overlayVm, PersistOverlay);
+                _overlayWindow ??= new OverlayWindow(_overlayVm, PersistOverlay, SplitFight);
                 _overlayWindow.Show();
                 UpdateOverlay();
             }

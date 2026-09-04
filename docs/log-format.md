@@ -72,6 +72,17 @@ and takes minutes to run back **does** start a new encounter once the bridge win
 (3 min) lapses — an accepted artifact. Rest period 0 disables the bridge (strict
 per-pull). Session mode caps an unbroken encounter at 20 minutes.
 
+**Split markers.** When automatic detection gets a boundary wrong, the user can force
+one: the "Split fight" button / Ctrl+Alt+S ends the encounter in progress at the last
+event's timestamp, and the next combat starts a fresh one (re-engage and corpse-run
+merges are suppressed across that point). Each split is stored as
+`{ "Timestamp": "...", "Kind": 0 }` in `%AppData%/TriuneLogParser/markers/<Character>_<server>.json`
+— keyed to the character, not the file, so it still applies after the log is archived.
+On any re-parse the builder closes the open fight (`EncounterEndReason.Manual`)
+immediately before the first event at or after each marker's timestamp; a marker that
+predates the parsed window is ignored. `triuneparse` loads the sidecar automatically
+(`--markers <file>` to point elsewhere, `--no-markers` to skip).
+
 ### Deaths / fight end
 | Form | Attacker | Target |
 |---|---|---|

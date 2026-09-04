@@ -7,6 +7,8 @@
 
     <Window.InputBindings>
         <KeyBinding Key="F5" Command="{Binding ReloadCommand}" />
+        <!-- Also registered as a global hotkey (works while the game has focus). -->
+        <KeyBinding Key="S" Modifiers="Control+Alt" Command="{Binding SplitFightCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -34,6 +36,8 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
                     <ToggleButton Content="Follow live" IsChecked="{Binding AutoFollow}" />
+                    <Button Content="✂ Split fight" Command="{Binding SplitFightCommand}" Margin="8,0,0,0"
+                            ToolTip="End the current encounter now; the next combat starts a fresh one (Ctrl+Alt+S). Saved beside the log so re-parses match." />
                     <ToggleButton Content="Overlay" IsChecked="{Binding OverlayVisible}" Margin="8,0,0,0" />
                     <Button Content="{Binding OverlayClickThroughText}" Command="{Binding ToggleClickThroughCommand}" Margin="8,0,0,0" />
                 </StackPanel>

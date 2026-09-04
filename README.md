@@ -5,10 +5,10 @@ A real-time EverQuest combat-log parser and damage meter for the
 running the RoF2 client whose log wording is different enough that mainstream parsers
 (EQLogParser, EQ Legends Companion) don't fully work with it.
 
-> **Status:** early development. Phases 1–2 are landing: the parsing engine, the
-> `triuneparse` CLI, and a WPF desktop app with a live encounter browser and
-> damage-meter breakdown. The always-on-top overlay is next — see
-> [the roadmap](#roadmap).
+> **Status:** early development, but all four planned phases have landed — the parsing
+> engine, the `triuneparse` CLI, the WPF desktop app (live encounter browser +
+> damage-meter breakdown), the always-on-top overlay, and class inference / export /
+> per-mob views. See [the roadmap](#roadmap) and [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -21,7 +21,11 @@ running the RoF2 client whose log wording is different enough that mainstream pa
 - **Pet attribution.** Pet output is credited to its owner (detected from Triune's
   `Name (Owner: X)` log tags) as a labelled sub-group; unowned pets stay separate.
 - **Encounter splitting.** EQLogParser-style fight detection that groups multi-mob
-  pulls into one encounter and closes fights on death or inactivity.
+  pulls into one encounter and closes fights on death or inactivity, with a
+  configurable rest period and raid-aware handling of deaths and corpse runs.
+- **Force split.** When detection gets a boundary wrong, a button or **Ctrl+Alt+S**
+  ends the current encounter on the spot. The split is saved beside the log, so
+  re-parsing reproduces it.
 - **Time-range grouping.** Merge any set of encounters into one aggregate view.
 - **Always-on-top overlay** — draggable damage-meter bars pinned over the game, with a
   click-through mode.
@@ -55,7 +59,10 @@ Follow a live log (updates as the game writes):
 dotnet run --project src/TriuneLogParser.Cli -- "C:\EverQuest\logs\eqlog_Yourname_multiclass.txt" --follow
 ```
 
-`--json` emits machine-readable output instead of the table.
+`--json` emits machine-readable output instead of the table. `--rest <seconds>` picks
+the encounter model (`0` = one encounter per pull, `>0` = session/event style).
+Saved [split markers](docs/log-format.md) are applied automatically; `--no-markers`
+ignores them.
 
 ### Building the standalone app
 
