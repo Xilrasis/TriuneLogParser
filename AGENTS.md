@@ -72,8 +72,8 @@ a version tag. To release:
    the real version from the tag).
 3. Merge to `main`, then from `main`: `git tag vx.y.z && git push origin vx.y.z`.
 4. `.github/workflows/release.yml` runs the tests, publishes both single-file win-x64
-   exes with `-p:Version=<tag>`, and creates the Release with `SHA256SUMS.txt` and
-   auto-generated notes. Releases are marked pre-release while on `0.x`.
+   exes with `-p:Version=<tag>`, and creates the Release (marked **Latest**) with
+   `SHA256SUMS.txt` and auto-generated notes.
 
 ## Layout
 

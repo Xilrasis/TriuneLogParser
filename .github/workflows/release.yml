@@ -63,7 +63,7 @@ jobs:
         with:
           files: out/*
           generate_release_notes: true
-          prerelease: true
+          make_latest: true
           body: |
             Standalone Windows x64 builds — no .NET install required.
 
