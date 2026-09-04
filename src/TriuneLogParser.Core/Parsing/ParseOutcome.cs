@@ -18,11 +18,15 @@ public readonly struct ParseOutcome
     /// <summary>The line looked damage-related but no rule claimed it.</summary>
     public bool UnparsedDamageLike { get; private init; }
 
-    public bool Handled => Event != null || Crit != null || Zone != null;
+    /// <summary>A rule recognised the line but it carries no combat value (absorbs, flavour).</summary>
+    public bool Consumed { get; private init; }
+
+    public bool Handled => Event != null || Crit != null || Zone != null || Consumed;
 
     public static ParseOutcome None => default;
     public static ParseOutcome FromEvent(CombatEvent e) => new() { Event = e };
     public static ParseOutcome FromCrit(CritMarker c) => new() { Crit = c };
     public static ParseOutcome FromZone(ZoneChange z) => new() { Zone = z };
     public static ParseOutcome Unparsed() => new() { UnparsedDamageLike = true };
+    public static ParseOutcome Ignored() => new() { Consumed = true };
 }

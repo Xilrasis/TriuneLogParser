@@ -23,7 +23,7 @@ public sealed class NameResolver
         if (string.IsNullOrWhiteSpace(raw))
             return raw;
 
-        raw = raw.Trim();
+        raw = CollapseSpaces(raw);
 
         if (SelfTokens.Contains(raw))
             return CharacterName ?? "You";
@@ -33,8 +33,18 @@ public sealed class NameResolver
             return raw;
 
         raw = TrimCorpse(raw);
+
+        if (SelfTokens.Contains(raw))
+            return CharacterName ?? "You";
+
         raw = NormalizeArticle(raw);
         return raw;
+    }
+
+    private static string CollapseSpaces(string s)
+    {
+        s = s.Trim();
+        return s.Contains("  ") ? string.Join(' ', s.Split(' ', StringSplitOptions.RemoveEmptyEntries)) : s;
     }
 
     /// <summary>
@@ -64,11 +74,29 @@ public sealed class NameResolver
 
     public static bool IsSelfToken(string raw) => SelfTokens.Contains(raw.Trim());
 
+    /// <summary>
+    /// Strip a trailing corpse marker so a dead entity's lingering DoT / effect is
+    /// credited to the underlying player or mob rather than a phantom "Xscorpse" entity.
+    /// EQ writes "Name's corpse", "Name`s corpse", and (mangled) "Namescorpse".
+    /// </summary>
     private static string TrimCorpse(string name)
     {
-        const string corpse = "'s corpse";
-        if (name.EndsWith(corpse, StringComparison.OrdinalIgnoreCase))
-            name = name[..^corpse.Length];
+        foreach (string suffix in Corpses)
+        {
+            if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                return name[..^suffix.Length];
+        }
+
+        // Mangled form with no separator, only seen for (single-token) player names:
+        // "Gnomiesscorpse" -> "Gnomies".
+        if (!name.Contains(' ') && name.Length > 8 &&
+            name.EndsWith("scorpse", StringComparison.OrdinalIgnoreCase))
+        {
+            return name[..^"scorpse".Length];
+        }
+
         return name;
     }
+
+    private static readonly string[] Corpses = { "'s corpse", "`s corpse" };
 }

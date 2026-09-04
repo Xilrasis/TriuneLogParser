@@ -23,9 +23,13 @@ public sealed class RosterTracker
     private readonly Dictionary<string, EntityKind> _kinds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _verifiedPlayers = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>The logging character, if known (from the log filename).</summary>
+    public string? Self { get; }
+
     public RosterTracker(PetRegistry pets, string? characterName)
     {
         _pets = pets;
+        Self = characterName;
         if (!string.IsNullOrEmpty(characterName))
         {
             _verifiedPlayers.Add(characterName);

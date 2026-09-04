@@ -57,7 +57,14 @@ public sealed partial class CombatLogParser
         Match m;
 
         if ((m = ZoneRegex().Match(msg)).Success)
-            return ParseOutcome.FromZone(new ZoneChange(line.Timestamp, m.Groups["zone"].Value));
+        {
+            string zone = m.Groups["zone"].Value.Trim();
+            // "You have entered an Instanced Version of the zone." follows the real
+            // zone line on instanced content — it's not a distinct destination.
+            if (zone.Equals("an Instanced Version of the zone", StringComparison.OrdinalIgnoreCase))
+                return ParseOutcome.Ignored();
+            return ParseOutcome.FromZone(new ZoneChange(line.Timestamp, zone));
+        }
 
         if ((m = SlainByRegex().Match(msg)).Success)
             return Death(line, victim: m.Groups["t"].Value, killer: m.Groups["k"].Value);
@@ -74,6 +81,15 @@ public sealed partial class CombatLogParser
             string? sp = m.Groups["sp"].Success ? m.Groups["sp"].Value : null;
             return ParseOutcome.FromCrit(new CritMarker(line.Timestamp, ParseAmount(m), sp, self, line.Raw));
         }
+
+        // Damage-absorb / rune / spellshield lines carry "points of damage" but are not
+        // damage dealt — recognise and drop so they don't pollute the coverage metric.
+        if (ShieldedRegex().IsMatch(msg) || SpellshieldRegex().IsMatch(msg) || AbsorbRegex().IsMatch(msg))
+            return ParseOutcome.Ignored();
+
+        if ((m = SelfTakenRegex().Match(msg)).Success)
+            return Damage(line, attacker: null, target: "You", amount: ParseAmount(m),
+                DamageMechanic.NonMelee, verb: null, spell: null, ownerHint: null);
 
         if ((m = HealYouRegex().Match(msg)).Success)
             return Heal(line, healer: null, target: "You", m);
@@ -95,7 +111,7 @@ public sealed partial class CombatLogParser
             return Damage(line, attacker: "You", target: m.Groups["t"].Value,
                 amount: ParseAmount(m), DamageMechanic.NonMelee, verb: null, spell: m.Groups["sp"].Value, ownerHint);
 
-        // Swarm / temporary pets: "Gnomies`s Animated Corpse hits a magma rocklord for 392 points of damage."
+        // Swarm / temporary pets: "Gnomies`s Animated Corpse hits a magma rocklord for 392 points? of damage."
         if ((m = SwarmPetHitRegex().Match(msg)).Success)
         {
             string owner = m.Groups["owner"].Value;
@@ -309,16 +325,16 @@ public sealed partial class CombatLogParser
     [GeneratedRegex(@"^(?<who>.+?) (?:scores? a critical hit|lands? a Crippling Blow|delivers? a critical blast)! \((?<amt>\d+)\)(?: \((?<sp>.+)\))?$")]
     private static partial Regex CritRegex();
 
-    [GeneratedRegex(@"^You have been healed for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^You have been healed for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex HealYouRegex();
 
-    [GeneratedRegex(@"^(?<h>.+?) (?:has|have) healed (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?<h>.+?) (?:has|have) healed (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex HealGenericRegex();
 
-    [GeneratedRegex(@"^You heal (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^You heal (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex HealYouCastRegex();
 
-    [GeneratedRegex(@"^(?:has|have) healed (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?:has|have) healed (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex StrippedHealRegex();
 
     [GeneratedRegex(@"^(?<t>.+?) has taken (?<amt>\d+) damage from (?<sp>.+?) by (?<caster>.+?)\.$")]
@@ -327,34 +343,46 @@ public sealed partial class CombatLogParser
     [GeneratedRegex(@"^(?<t>.+?) has taken (?<amt>\d+) damage from your (?<sp>.+?)\.$")]
     private static partial Regex DotFromYourRegex();
 
-    [GeneratedRegex(@"^(?<owner>[A-Z][A-Za-z`'-]+)`s (?<pet>[A-Z][A-Za-z '-]+?) (?<verb>hits?|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points of (?<nm>non-melee )?damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@" (?:has|have) shielded .+? from \d+ points? of damage\.")]
+    private static partial Regex ShieldedRegex();
+
+    [GeneratedRegex(@"^The Spellshield absorbed \d+ of \d+ points? of damage$")]
+    private static partial Regex SpellshieldRegex();
+
+    [GeneratedRegex(@"^.+? absorbs? \d+ (?:of \d+ )?points? of damage")]
+    private static partial Regex AbsorbRegex();
+
+    [GeneratedRegex(@"You have taken (?<amt>\d+) points? of damage\.$")]
+    private static partial Regex SelfTakenRegex();
+
+    [GeneratedRegex(@"^(?<owner>[A-Z][A-Za-z`'-]+)`s (?<pet>[A-Z][A-Za-z '-]+?) (?<verb>hits?|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points? of (?<nm>non-melee )?damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex SwarmPetHitRegex();
 
     [GeneratedRegex(@"^(?<owner>[A-Z][A-Za-z`'-]+)`s (?<pet>[A-Z][A-Za-z '-]+?) tries to (?<verb>[a-z]+) (?<t>.+?), but (?<reason>[^!]+)!$")]
     private static partial Regex SwarmPetMissRegex();
 
-    [GeneratedRegex(@"^(?<t>.+?) was hit by non-melee for (?<amt>\d+) points of damage\.$")]
+    [GeneratedRegex(@"^(?<t>.+?) was hit by non-melee for (?<amt>\d+) points? of damage\.$")]
     private static partial Regex DamageShieldRegex();
 
-    [GeneratedRegex(@"^(?<a>.+?) hit (?<t>.+?) for (?<amt>\d+) points of non-melee damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?<a>.+?) hit (?<t>.+?) for (?<amt>\d+) points? of non-melee damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex NonMeleeAttackerRegex();
 
-    [GeneratedRegex(@"^hit (?<t>.+?) for (?<amt>\d+) points of non-melee damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^hit (?<t>.+?) for (?<amt>\d+) points? of non-melee damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex NonMeleeNoAttackerRegex();
 
-    [GeneratedRegex(@"^You (?<verb>[a-z]+) (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^You (?<verb>[a-z]+) (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex SelfMeleeHitRegex();
 
     [GeneratedRegex(@"^You try to (?<verb>[a-z]+) (?<t>.+?), but (?<reason>[^!]+)!$")]
     private static partial Regex SelfMeleeMissRegex();
 
-    [GeneratedRegex(@"^(?<a>.+?) (?<verb>[a-z]+) YOU for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?<a>.+?) (?<verb>[a-z]+) YOU for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex IncomingMeleeRegex();
 
-    [GeneratedRegex(@"^(?<a>.+?) (?<verb>hits|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?<a>.+?) (?<verb>hits|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex OtherMeleeHitRegex();
 
-    [GeneratedRegex(@"^(?<verb>hits|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points of damage\.(?: \((?<sp>.+)\))?$")]
+    [GeneratedRegex(@"^(?<verb>hits|crushes|slashes|pierces|bites|claws|gores|stings|mauls|smashes|slams|rends|burns|freezes|slices|kicks|punches|bashes|backstabs|strikes|frenzies on) (?<t>.+?) for (?<amt>\d+) points? of damage\.(?: \((?<sp>.+)\))?$")]
     private static partial Regex StrippedMeleeHitRegex();
 
     [GeneratedRegex(@"^(?<a>.+?) tries to (?<verb>[a-z]+) (?<t>.+?), but (?<reason>[^!]+)!$")]

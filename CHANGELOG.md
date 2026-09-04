@@ -32,6 +32,8 @@ feature-scoped; newest first. Format loosely follows
     (multiclass-aware, e.g. "Monk / Enchanter / Necromancer"), shown on the fighter row.
   - **Export** a selected encounter (or range) to CSV or JSON.
   - `triuneparse --table` now prints a per-mob summary.
+  - `triuneparse --rest <seconds>` selects the rest-period model (0 = per-pull,
+    >0 = session/event) instead of only a raw idle timeout.
 
 ### Fixed
 - Swarm / temporary pets (`Player`s Animated Corpse hits …`) are now parsed and
@@ -41,6 +43,21 @@ feature-scoped; newest first. Format loosely follows
 - Breakdown percentage bars were always ~50% wide — they now reflect each row's share.
 - Collapsing a breakdown row no longer snaps back open on the next refresh.
 - Breakdown ability/entity names were near-black on the dark rows; now readable.
+- A dead entity's lingering DoT ticks (`Name's corpse hit …`, and the mangled
+  `Namescorpse` form) are credited to the underlying player or mob instead of spawning
+  a phantom `Namescorpse` combatant.
+- Grammar coverage: damage-absorb / rune / Spellshield lines and `You have taken N
+  points of damage` are now recognised (previously counted as misses), and every
+  damage rule accepts the singular "point of damage". Reference raid log goes from
+  ~98% to 100% coverage.
+- Names with trailing or doubled spaces (`Zebuxoruk `, `Emperor  Ssraeshza`) are
+  normalised so one entity isn't split in two.
+- Raid encounters no longer fragment on every death: after the logging character dies,
+  the fight is held open through the corpse run (idle gap + release-to-bind zoning +
+  run back) for up to 3 minutes so a phased event stays one encounter. `"an Instanced
+  Version of the zone"` is no longer treated as a zone change.
+- Rest period 0 splits more cleanly — a mob that only swung at you once no longer
+  holds the per-pull encounter open until it dies.
 
 ### Added
 - **Settings** dialog: configurable **rest period between fights** (0–5 min; 0 = one

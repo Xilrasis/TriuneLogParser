@@ -38,14 +38,33 @@ public class SettingsBehaviourTests
     public void For_rest_period_maps_windows()
     {
         EncounterOptions z = EncounterOptions.ForRestPeriod(0);
+        Assert.True(z.SplitOnAllMobsDead);
         Assert.Equal(TimeSpan.Zero, z.ReengageWindow);
-        Assert.Equal(TimeSpan.FromSeconds(8), z.IdleTimeout);
 
         EncounterOptions two = EncounterOptions.ForRestPeriod(120);
-        Assert.Equal(TimeSpan.FromSeconds(120), two.ReengageWindow);
+        Assert.False(two.SplitOnAllMobsDead);
         Assert.Equal(TimeSpan.FromSeconds(120), two.IdleTimeout);
 
-        Assert.Equal(TimeSpan.FromSeconds(300), EncounterOptions.ForRestPeriod(9999).ReengageWindow);
+        Assert.Equal(TimeSpan.FromSeconds(300), EncounterOptions.ForRestPeriod(9999).IdleTimeout);
+    }
+
+    [Fact]
+    public void Corpse_run_does_not_fragment_a_raid_encounter()
+    {
+        string[] lines =
+        {
+            L("21:00:00", "Xilaria hit a collapsing star for 5000 points of non-melee damage. (Distant Strike)"),
+            L("21:00:05", "A collapsing star hits YOU for 9000 points of damage."),
+            L("21:00:06", "You have been slain by a collapsing star!"),
+            L("21:00:10", "You have entered The Bazaar."),
+            L("21:00:30", "You have entered The Plane of Time."),
+            L("21:00:45", "Xilaria hit a collapsing star for 5000 points of non-melee damage. (Distant Strike)"),
+            L("21:01:20", "You have slain a collapsing star!"),
+        };
+
+        // 15 s rest would normally split on the 39 s gap and the zone changes; the
+        // death-recovery bridge keeps it as one fight.
+        Assert.Single(Build(lines, EncounterOptions.ForRestPeriod(15)));
     }
 
     [Fact]

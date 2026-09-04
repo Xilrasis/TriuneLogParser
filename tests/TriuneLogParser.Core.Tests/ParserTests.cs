@@ -190,6 +190,65 @@ public class ParserTests
         Assert.Equal("the Bazaar", outcome.Zone!.Zone);
     }
 
+    [Fact]
+    public void Instanced_version_line_is_not_a_zone_change()
+    {
+        var parser = new CombatLogParser(new NameResolver("Xilaria"), new PetRegistry());
+        Assert.True(LogLine.TryParse(
+            "[Thu Sep 03 21:06:50 2026] You have entered an Instanced Version of the zone.", 1, out LogLine line));
+        ParseOutcome outcome = parser.Parse(line);
+        Assert.Null(outcome.Zone);
+        Assert.True(outcome.Handled);
+    }
+
+    [Fact]
+    public void Corpse_dot_tick_is_credited_to_the_underlying_entity()
+    {
+        var (_, e) = ParseOne(
+            "Xeroan Xi`Geruonask`s corpse hit Taruman for 59 points of non-melee damage. (Rot of the Plaguebringer)");
+        Assert.Equal("Xeroan Xi`Geruonask", e.Attacker);
+        Assert.Equal("Taruman", e.Target);
+    }
+
+    [Fact]
+    public void Mangled_player_corpse_folds_into_the_player()
+    {
+        var r = new NameResolver("Gnomies");
+        Assert.Equal("Gnomies", r.Resolve("Gnomiesscorpse"));
+        Assert.Equal("Personality", r.Resolve("Personalityscorpse"));
+    }
+
+    [Fact]
+    public void Name_with_trailing_space_collapses()
+    {
+        var r = new NameResolver("Xilaria");
+        Assert.Equal("Zebuxoruk", r.Resolve("Zebuxoruk "));
+        Assert.Equal("Emperor Ssraeshza", r.Resolve("Emperor  Ssraeshza"));
+    }
+
+    [Theory]
+    [InlineData("Gnomies has shielded Taruman from 812 points of damage.")]
+    [InlineData("The Spellshield absorbed 300 of 300 points of damage")]
+    public void Shield_and_absorb_lines_carry_no_damage(string message)
+    {
+        var parser = new CombatLogParser(new NameResolver("Xilaria"), new PetRegistry());
+        Assert.True(LogLine.TryParse($"[Thu Sep 03 12:04:51 2026] {message}", 1, out LogLine line));
+        ParseOutcome outcome = parser.Parse(line);
+        Assert.Null(outcome.Event);
+        Assert.True(outcome.Handled);
+        Assert.False(outcome.UnparsedDamageLike);
+    }
+
+    [Fact]
+    public void Self_damage_taken_line_is_parsed()
+    {
+        var (_, e) = ParseOne("You have taken 1837 points of damage.");
+        Assert.Equal(CombatAction.Damage, e.Action);
+        Assert.Equal("Xilaria", e.Target);
+        Assert.Null(e.Attacker);
+        Assert.Equal(1837, e.Amount);
+    }
+
     [Theory]
     [InlineData("eqlog_Xilaria_multiclass.txt", "Xilaria", "multiclass")]
     [InlineData("C:/EverQuest/logs/eqlog_Gnomies_project_triune.txt", "Gnomies", "project_triune")]

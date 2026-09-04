@@ -18,6 +18,8 @@ if (args.Length == 0 || args.Contains("-h") || args.Contains("--help"))
           --json             Machine-readable JSON
           --follow           Tail the file and print encounters as they close
           --idle <seconds>   Idle timeout before a fight closes (default 45)
+          --rest <seconds>   Rest period (0-300); 0 = per-pull split, >0 = session/event
+                             style. Overrides --idle when given.
           --top <n>          Show at most n source buckets per fighter (default 6)
           --unparsed         List distinct damage-like lines the grammar missed
         """);
@@ -35,9 +37,12 @@ bool json = args.Contains("--json");
 bool follow = args.Contains("--follow");
 bool showUnparsed = args.Contains("--unparsed");
 int idle = OptInt("--idle", 45);
+int rest = OptInt("--rest", -1);
 int top = OptInt("--top", 6);
 
-var options = new EncounterOptions { IdleTimeout = TimeSpan.FromSeconds(idle) };
+var options = rest >= 0
+    ? EncounterOptions.ForRestPeriod(rest)
+    : new EncounterOptions { IdleTimeout = TimeSpan.FromSeconds(idle) };
 string? character = LogFileTailer.TryExtractCharacterName(path);
 
 if (follow)

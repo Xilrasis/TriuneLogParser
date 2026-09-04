@@ -58,7 +58,15 @@ type becomes a pet owned by `{Player}` and its damage folds into that player as 
 ### Zone
 | Form | Notes |
 |---|---|
-| `You have entered <zone>.` | Ends any open fight. |
+| `You have entered <zone>.` | Ends any open fight (but see corpse-run bridge below). |
+| `You have entered an Instanced Version of the zone.` | Ignored — trails the real zone line on instanced content. |
+
+**Corpse-run bridge.** After `You have been slain by <mob>!` (logging character), the
+open fight is *suspended* rather than closed for up to 3 minutes: the idle gap while
+you lie dead, the zone to your bind point, and the zone back into the instance don't
+split the encounter. Combat resuming within the window revives it. This keeps a phased
+raid event (bosses dying at different times, wipes and recoveries) as one encounter at
+any non-zero rest period.
 
 ### Deaths / fight end
 | Form | Attacker | Target |
@@ -95,6 +103,14 @@ The hit may appear on the line before or after the marker. See
 | Form | Mechanic |
 |---|---|
 | `<target> was hit by non-melee for <amount> points of damage.` | Damage Shield |
+| `You have taken <amount> points of damage.` | Incoming non-melee to the character (no attacker named) |
+
+### Corpse names
+A dead entity keeps acting for a few seconds (lingering DoT). EQ writes the actor as
+`<name>'s corpse`, `` <name>`s corpse ``, or — for single-token player names — the
+mangled `<name>scorpse`. All three resolve back to `<name>` so the damage is credited
+to the real player or mob, not a phantom combatant. `"<player>`s Animated Corpse"` etc.
+are *swarm pets*, not corpses, and are left intact.
 
 Flavor-only DS lines with no number (`... is struck by an unseen enemy.`,
 `... was pierced by thorns.`) are ignored — nothing to attribute.
@@ -126,8 +142,11 @@ Third-person forms (`crushes` → `crush`) are normalized.
 ## Deliberately ignored
 
 AA-cap spam, `[NMS]` loot spam, killing-spree / RAMPAGE / FLURRY flavor lines (the
-real damage is on its own line), MOTD, `Logging to ... is now *ON*`, absorb / rune
-"shielded itself from" lines.
+real damage is on its own line), MOTD, `Logging to ... is now *ON*`. Damage-absorb
+lines carry a "points of damage" number but are **not** damage dealt and are dropped
+so they don't pollute the coverage metric: `<who> has shielded <target> from N points
+of damage.`, `The Spellshield absorbed N of M points of damage`, `<who> absorbs N
+points of damage`.
 
 ## Class inference
 

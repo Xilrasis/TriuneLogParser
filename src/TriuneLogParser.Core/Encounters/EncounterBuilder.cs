@@ -32,18 +32,39 @@ public sealed class EncounterOptions
     public TimeSpan ReengageWindow { get; set; } = TimeSpan.FromSeconds(12);
 
     /// <summary>
-    /// Build options from a single "rest period" (0–300 s). 0 splits every pull into its
-    /// own encounter (chain-pulls are not merged); a larger value merges chain-pulls up
-    /// to that gap and closes quiet fights after it.
+    /// When true, a fight is not closed by the idle timeout or a zone change during the
+    /// <see cref="DeathRecoveryWindow"/> after the logging character dies — a corpse run
+    /// back to the raid instance (release to bind → zone → run in → resume) stays one
+    /// encounter instead of fragmenting on every death.
+    /// </summary>
+    public bool BridgeDeathRecovery { get; set; } = true;
+
+    /// <summary>How long after a self-death the fight is held open for a corpse run.</summary>
+    public TimeSpan DeathRecoveryWindow { get; set; } = TimeSpan.FromMinutes(3);
+
+    /// <summary>
+    /// Build options from a single "rest period" (0–300 s).
+    /// <para>
+    /// 0 = aggressive per-pull: a fight ends the instant every mob it touched is dead,
+    /// so trash grinds break apart cleanly (raids will fragment — that's the trade-off).
+    /// </para>
+    /// <para>
+    /// &gt; 0 = session/event style: a fight ends only after this many seconds with no
+    /// combat, or a zone change. A phased raid where bosses die at different times but
+    /// combat never stops stays one encounter.
+    /// </para>
     /// </summary>
     public static EncounterOptions ForRestPeriod(int seconds)
     {
         seconds = Math.Clamp(seconds, 0, 300);
+        bool perPull = seconds == 0;
         return new EncounterOptions
         {
-            SplitOnAllMobsDead = true,
-            ReengageWindow = TimeSpan.FromSeconds(seconds),
-            IdleTimeout = TimeSpan.FromSeconds(Math.Max(8, seconds)),
+            SplitOnAllMobsDead = perPull,
+            ReengageWindow = perPull ? TimeSpan.Zero : TimeSpan.FromSeconds(seconds),
+            IdleTimeout = TimeSpan.FromSeconds(perPull ? 6 : seconds),
+            MaxDuration = perPull ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(20),
+            BridgeDeathRecovery = !perPull,
         };
     }
 }
@@ -60,6 +81,13 @@ public sealed class EncounterBuilder
     private readonly RosterTracker _roster;
     private readonly List<Encounter> _completed = new();
     private Encounter? _current;
+
+    /// <summary>A fight parked mid-corpse-run: zoned away after a self-death, awaiting re-engage.</summary>
+    private Encounter? _suspended;
+
+    /// <summary>Fights are held open (idle / zone) until this time after the logging character dies.</summary>
+    private DateTime _recoveryUntil = DateTime.MinValue;
+
     private int _nextId = 1;
     private string? _zone;
 
@@ -128,17 +156,38 @@ public sealed class EncounterBuilder
     public void HandleZone(ZoneChange zone)
     {
         _zone = zone.Zone;
-        if (_current != null)
-            Close(EncounterEndReason.ZoneChange, _current.LastActivity);
+
+        if (_current == null)
+            return;
+
+        // Mid-corpse-run: keep the fight parked so it resumes when we run back in.
+        if (_opt.BridgeDeathRecovery && zone.Timestamp <= _recoveryUntil)
+        {
+            _suspended = _current;
+            _current = null;
+            return;
+        }
+
+        Close(EncounterEndReason.ZoneChange, _current.LastActivity);
     }
 
     /// <summary>Close fights that have gone quiet as of <paramref name="now"/>.</summary>
     public void Advance(DateTime now)
     {
+        // A parked fight that nobody came back to within the recovery window is done.
+        if (_suspended != null && now - _suspended.LastActivity > _opt.DeathRecoveryWindow)
+            FlushSuspended();
+
         if (_current == null)
             return;
 
-        if (now - _current.LastActivity > _opt.IdleTimeout)
+        // During a corpse run the character is dead on the ground — don't let the
+        // ordinary idle gap close the fight the raid is still fighting.
+        TimeSpan idle = _opt.BridgeDeathRecovery && now <= _recoveryUntil
+            ? (_opt.IdleTimeout > _opt.DeathRecoveryWindow ? _opt.IdleTimeout : _opt.DeathRecoveryWindow)
+            : _opt.IdleTimeout;
+
+        if (now - _current.LastActivity > idle)
         {
             Close(EncounterEndReason.Idle, _current.LastActivity);
             return;
@@ -146,6 +195,39 @@ public sealed class EncounterBuilder
 
         if (_opt.MaxDuration > TimeSpan.Zero && now - _current.Start >= _opt.MaxDuration)
             Close(EncounterEndReason.TimeCap, now);
+    }
+
+    private void FlushSuspended()
+    {
+        if (_suspended == null)
+            return;
+
+        Encounter enc = _suspended;
+        _suspended = null;
+        enc.IsActive = false;
+        enc.EndReason = EncounterEndReason.ZoneChange;
+
+        if (enc.NpcsKilled.Count > 0 || enc.Duration >= _opt.MinDuration)
+            _completed.Add(enc);
+    }
+
+    /// <summary>Revive a corpse-run fight when combat resumes within the recovery window.</summary>
+    private Encounter? ResumeSuspended(DateTime now)
+    {
+        if (_suspended == null)
+            return null;
+
+        if (now - _suspended.LastActivity > _opt.DeathRecoveryWindow)
+        {
+            FlushSuspended();
+            return null;
+        }
+
+        Encounter enc = _suspended;
+        _suspended = null;
+        enc.IsActive = true;
+        enc.EndReason = EncounterEndReason.None;
+        return _current = enc;
     }
 
     public void Handle(CombatEvent e)
@@ -198,7 +280,7 @@ public sealed class EncounterBuilder
         if (!isEngage)
             return;
 
-        _current ??= ReopenRecent(e.Timestamp) ?? StartEncounter(e.Timestamp);
+        _current ??= ResumeSuspended(e.Timestamp) ?? ReopenRecent(e.Timestamp) ?? StartEncounter(e.Timestamp);
 
         string? npc = targetNpc ? e.Target : attackerNpc ? e.Attacker : null;
 
@@ -232,15 +314,24 @@ public sealed class EncounterBuilder
             _current.NpcsKilled.Add(mob);
             _current.NpcDamage.TryAdd(mob, 0);
 
-            if (_opt.SplitOnAllMobsDead &&
-                _current.NpcDamage.Keys.All(_current.NpcsKilled.Contains))
-            {
+            // Only mobs that friendlies actually damaged gate the close — a mob that
+            // merely swung at us once shouldn't hold a per-pull encounter open.
+            bool allDamagedDead = _current.NpcDamage
+                .Where(kv => kv.Value > 0)
+                .All(kv => _current.NpcsKilled.Contains(kv.Key));
+
+            if (_opt.SplitOnAllMobsDead && allDamagedDead)
                 Close(EncounterEndReason.AllMobsDead, e.Timestamp);
-            }
         }
         else if (e.TargetKind == EntityKind.Player && e.Target is { } who)
         {
             _current.PlayerDeaths.Add(who);
+
+            if (_opt.BridgeDeathRecovery && _roster.Self is { } self &&
+                who.Equals(self, StringComparison.OrdinalIgnoreCase))
+            {
+                _recoveryUntil = e.Timestamp + _opt.DeathRecoveryWindow;
+            }
         }
     }
 
@@ -278,6 +369,7 @@ public sealed class EncounterBuilder
 
     public void Finish()
     {
+        FlushSuspended();
         if (_current != null)
             Close(EncounterEndReason.LogEnd, _current.LastActivity);
     }
