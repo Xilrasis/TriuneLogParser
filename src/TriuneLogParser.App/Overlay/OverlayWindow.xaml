@@ -49,10 +49,10 @@
                 <StackPanel>
                     <DockPanel Margin="0,0,0,4">
                         <TextBlock Text="Metric" Foreground="#9aa0a6" FontSize="10" Width="60" VerticalAlignment="Center" />
-                        <Button Content="◀" Width="20" Click="MetricPrev_Click" />
+                        <Button Content="◀" Style="{StaticResource StepButton}" Click="MetricPrev_Click" />
                         <TextBlock Text="{Binding MetricLabel}" Foreground="#e7e8ea" FontSize="10" VerticalAlignment="Center"
                                    TextAlignment="Center" MinWidth="90" />
-                        <Button Content="▶" Width="20" Click="MetricNext_Click" />
+                        <Button Content="▶" Style="{StaticResource StepButton}" Click="MetricNext_Click" />
                     </DockPanel>
                     <DockPanel Margin="0,0,0,4">
                         <TextBlock Text="Opacity" Foreground="#9aa0a6" FontSize="10" Width="60" VerticalAlignment="Center" />

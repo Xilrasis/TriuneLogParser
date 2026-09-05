@@ -7,6 +7,13 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+- Overlay tooltips were light text on the OS default light background — unreadable.
+  They now use the app's dark theme.
+- The ◀ / ▶ metric buttons in the overlay settings panel were invisible — the default
+  button padding clipped the glyph and the fill matched the panel. They're now visible
+  stepper buttons.
+
 ## [0.3.0] - 2026-09-05
 
 ### Added
