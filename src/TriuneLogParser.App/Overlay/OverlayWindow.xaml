@@ -83,14 +83,12 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Name" Foreground="#8a9096" FontSize="9" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="{Binding MidColHeader}" Foreground="#8a9096" FontSize="9"
-                           TextAlignment="Center" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="Rate" Foreground="#8a9096" FontSize="9" VerticalAlignment="Center" />
-                <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                              Background="#33ffffff" ShowsPreview="False" ResizeBehavior="CurrentAndNext" ResizeDirection="Columns"
-                              IsEnabled="{Binding ColumnsUnlocked}" DragCompleted="ColumnSplitter_DragCompleted" />
-                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                              Background="#33ffffff" ShowsPreview="False" ResizeBehavior="CurrentAndNext" ResizeDirection="Columns"
-                              IsEnabled="{Binding ColumnsUnlocked}" DragCompleted="ColumnSplitter_DragCompleted" />
+                           TextAlignment="Center" VerticalAlignment="Center" Margin="6,0,6,0" />
+                <TextBlock Grid.Column="2" Text="Rate" Foreground="#8a9096" FontSize="9" VerticalAlignment="Center" Margin="6,0,0,0" />
+                <GridSplitter Grid.Column="0" Style="{StaticResource ColumnSplitter}" DragCompleted="ColumnSplitter_DragCompleted"
+                              Visibility="{Binding ColumnsUnlocked, Converter={StaticResource BoolToVis}}" />
+                <GridSplitter Grid.Column="1" Style="{StaticResource ColumnSplitter}" DragCompleted="ColumnSplitter_DragCompleted"
+                              Visibility="{Binding ColumnsUnlocked, Converter={StaticResource BoolToVis}}" />
             </Grid>
 
             <!-- bars (scroll when there are more than fit) -->
@@ -127,10 +125,10 @@
                                                Effect="{StaticResource TextShadow}" />
                                     <TextBlock Grid.Column="1" Text="{Binding CenterText}" Foreground="#eef0f2" FontFamily="Consolas" FontSize="11"
                                                VerticalAlignment="Center" TextAlignment="Center" TextTrimming="CharacterEllipsis"
-                                               Effect="{StaticResource TextShadow}" />
+                                               Margin="6,0,6,0" Effect="{StaticResource TextShadow}" />
                                     <TextBlock Grid.Column="2" Text="{Binding DpsText}" Foreground="White" FontWeight="SemiBold" FontFamily="Consolas"
                                                FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                               Effect="{StaticResource TextShadow}" />
+                                               Margin="6,0,0,0" Effect="{StaticResource TextShadow}" />
                                 </Grid>
                             </Grid>
                         </Border>

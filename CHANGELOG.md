@@ -9,9 +9,9 @@ feature-scoped; newest first. Format loosely follows
 
 ### Added
 - **Resizable overlay columns.** Both overlays now have a column header row (Name /
-  Total / Rate) with drag handles between the columns, Excel-style. Columns stay
+  Total / Rate) with thin drag handles between the columns, Excel-style. Columns stay
   proportional and rescale with the window by default; a drag changes the ratio and
-  persists it. The handles obey the lock.
+  persists it. The handles hide when the overlay is locked.
 
 ### Fixed
 - Overlay tooltips were light text on the OS default light background — unreadable.

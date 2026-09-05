@@ -162,6 +162,33 @@
             </Style.Triggers>
         </Style>
 
+        <!-- thin, defined column-resize handle for the overlay headers -->
+        <Style x:Key="ColumnSplitter" TargetType="GridSplitter">
+            <Setter Property="Width" Value="3" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,1,-1,1" />
+            <Setter Property="Background" Value="#666a72" />
+            <Setter Property="ShowsPreview" Value="False" />
+            <Setter Property="ResizeBehavior" Value="CurrentAndNext" />
+            <Setter Property="ResizeDirection" Value="Columns" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridSplitter">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="1.5" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource Accent}" />
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter Property="Background" Value="{StaticResource Accent}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- lightweight scrollbar for the overlays: 7px, no arrows, rounded translucent thumb -->
         <Style x:Key="OverlayScrollBar" TargetType="ScrollBar">
             <Setter Property="Width" Value="7" />
