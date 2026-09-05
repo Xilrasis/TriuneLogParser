@@ -31,6 +31,24 @@
                         Margin="0,0,4,0" Background="Transparent" Foreground="#9aa0a6" BorderThickness="0" Cursor="Hand" />
             </Grid>
 
+            <Grid x:Name="HeaderCols" DockPanel.Dock="Top" Height="15" Margin="11,3,11,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="HdrName" />
+                    <ColumnDefinition x:Name="HdrMid" />
+                    <ColumnDefinition x:Name="HdrRate" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Source" Foreground="#8a9096" FontSize="9" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Total" Foreground="#8a9096" FontSize="9"
+                           TextAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="Rate" Foreground="#8a9096" FontSize="9" VerticalAlignment="Center" />
+                <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                              Background="#33ffffff" ShowsPreview="False" ResizeBehavior="CurrentAndNext" ResizeDirection="Columns"
+                              IsEnabled="{Binding ColumnsUnlocked}" DragCompleted="ColumnSplitter_DragCompleted" />
+                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                              Background="#33ffffff" ShowsPreview="False" ResizeBehavior="CurrentAndNext" ResizeDirection="Columns"
+                              IsEnabled="{Binding ColumnsUnlocked}" DragCompleted="ColumnSplitter_DragCompleted" />
+            </Grid>
+
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="4">
                 <ScrollViewer.Resources>
                     <Style TargetType="ScrollBar" BasedOn="{StaticResource OverlayScrollBar}" />
@@ -53,9 +71,9 @@
                                 </Grid>
                                 <Grid Margin="7,0,7,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="128*" />
-                                        <ColumnDefinition Width="140*" />
-                                        <ColumnDefinition Width="80*" />
+                                        <ColumnDefinition Width="{Binding NameCol}" />
+                                        <ColumnDefinition Width="{Binding MidCol}" />
+                                        <ColumnDefinition Width="{Binding RateCol}" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"

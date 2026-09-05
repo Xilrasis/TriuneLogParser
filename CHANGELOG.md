@@ -7,6 +7,12 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **Resizable overlay columns.** Both overlays now have a column header row (Name /
+  Total / Rate) with drag handles between the columns, Excel-style. Columns stay
+  proportional and rescale with the window by default; a drag changes the ratio and
+  persists it. The handles obey the lock.
+
 ### Fixed
 - Overlay tooltips were light text on the OS default light background — unreadable.
   They now use the app's dark theme.

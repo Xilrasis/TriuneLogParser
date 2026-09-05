@@ -42,6 +42,14 @@ public sealed class OverlaySettings
     /// <summary>Show the encounter title / duration header.</summary>
     public bool ShowHeader { get; set; } = true;
 
+    /// <summary>
+    /// Bar column split, as fractions of the row width: name / middle (total + %) / rate.
+    /// The middle column is the remainder. Columns stay proportional on window resize;
+    /// dragging a header splitter changes these ratios.
+    /// </summary>
+    public double NameColFraction { get; set; } = 0.40;
+    public double RateColFraction { get; set; } = 0.24;
+
     // ---- experimental "branch" overlay (per-player source breakdown) ----
     public double BranchLeft { get; set; } = 380;
     public double BranchTop { get; set; } = 40;
@@ -57,6 +65,14 @@ public sealed class OverlaySettings
         Height = Math.Clamp(Height, 90, 1600);
         BranchWidth = Math.Clamp(BranchWidth, 160, 1600);
         BranchHeight = Math.Clamp(BranchHeight, 90, 1600);
+        NameColFraction = Math.Clamp(NameColFraction, 0.12, 0.70);
+        RateColFraction = Math.Clamp(RateColFraction, 0.12, 0.70);
+        if (NameColFraction + RateColFraction > 0.85) // keep the middle column usable
+        {
+            double scale = 0.85 / (NameColFraction + RateColFraction);
+            NameColFraction *= scale;
+            RateColFraction *= scale;
+        }
         return this;
     }
 }

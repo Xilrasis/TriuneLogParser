@@ -49,7 +49,30 @@ public partial class OverlayWindow : Window
         LocationChanged += (_, _) => Save();
         SizeChanged += (_, _) => Save();
         ApplyLock(s.Locked);
+        SyncHeaderColumns();
         _loading = false;
+    }
+
+    // ---- resizable bar columns ----------------------------------------------
+
+    private void SyncHeaderColumns()
+    {
+        OverlaySettings s = _vm.Settings;
+        double mid = Math.Max(0.1, 1.0 - s.NameColFraction - s.RateColFraction);
+        HdrName.Width = new GridLength(s.NameColFraction, GridUnitType.Star);
+        HdrMid.Width = new GridLength(mid, GridUnitType.Star);
+        HdrRate.Width = new GridLength(s.RateColFraction, GridUnitType.Star);
+    }
+
+    private void ColumnSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        double total = HdrName.ActualWidth + HdrMid.ActualWidth + HdrRate.ActualWidth;
+        if (total <= 1)
+            return;
+
+        _vm.SetColumnFractions(HdrName.ActualWidth / total, HdrRate.ActualWidth / total);
+        SyncHeaderColumns(); // re-apply the clamped result
+        _persist();
     }
 
     private void Lock_Click(object sender, RoutedEventArgs e)
@@ -65,6 +88,7 @@ public partial class OverlayWindow : Window
         LockButton.ToolTip = locked ? "Unlock position and size" : "Lock position and size";
         ResizeGrip.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
         ResizeMode = locked ? ResizeMode.NoResize : ResizeMode.CanResize;
+        _vm.RaiseSettings(); // refresh ColumnsUnlocked -> header splitters enable/disable
     }
 
     public void SetClickThrough(bool on)

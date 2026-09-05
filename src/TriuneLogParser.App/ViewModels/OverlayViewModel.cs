@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Media;
 using TriuneLogParser.Core.Aggregation;
 using TriuneLogParser.Core.Config;
@@ -12,9 +13,17 @@ public sealed class OverlayBar : ObservableObject
     private double _fraction;
     private string _centerText = "";
     private string _dpsText = "";
+    private GridLength _nameCol = OverlayColumns.Default(0);
+    private GridLength _midCol = OverlayColumns.Default(1);
+    private GridLength _rateCol = OverlayColumns.Default(2);
 
     public required string Name { get; init; }
     public Brush Color { get; init; } = Brushes.SteelBlue;
+
+    /// <summary>Shared bar-column widths, pushed from the view-model.</summary>
+    public GridLength NameCol { get => _nameCol; set => Set(ref _nameCol, value); }
+    public GridLength MidCol { get => _midCol; set => Set(ref _midCol, value); }
+    public GridLength RateCol { get => _rateCol; set => Set(ref _rateCol, value); }
 
     public long Value { get => _value; set => Set(ref _value, value); }
     public double PerSecond { get => _perSecond; set => Set(ref _perSecond, value); }
@@ -42,6 +51,7 @@ public sealed class OverlayViewModel : ObservableObject
     private string _title = "Waiting for combat…";
     private string _subtitle = "";
     private OverlaySettings _settings = new();
+    private OverlayColumns _columns = new(new OverlaySettings());
     private double _lastDurationSeconds;
     private long _lastGrandTotal;
 
@@ -53,7 +63,37 @@ public sealed class OverlayViewModel : ObservableObject
     public OverlaySettings Settings
     {
         get => _settings;
-        set { _settings = value; RaiseSettings(); }
+        set { _settings = value; _columns = new OverlayColumns(value); RaiseSettings(); RaiseColumns(); }
+    }
+
+    // ---- bar columns (name / middle / rate), proportional, header-resizable ----
+    public System.Windows.GridLength NameCol => _columns.Name;
+    public System.Windows.GridLength MidCol => _columns.Mid;
+    public System.Windows.GridLength RateCol => _columns.Rate;
+    public bool ColumnsUnlocked => !_settings.Locked;
+
+    public string MidColHeader => _settings.Metric switch
+    {
+        OverlayMetric.DamageTaken => "Taken",
+        OverlayMetric.Healing => "Healing",
+        _ => "Total",
+    };
+
+    /// <summary>Called from the header splitter drag (view). Persist is the caller's job.</summary>
+    public void SetColumnFractions(double nameFraction, double rateFraction)
+    {
+        _columns.SetFractions(nameFraction, rateFraction);
+        RaiseColumns();
+        foreach (OverlayBar b in Bars)
+            _columns.CopyTo(b);
+    }
+
+    private void RaiseColumns()
+    {
+        Raise(nameof(NameCol));
+        Raise(nameof(MidCol));
+        Raise(nameof(RateCol));
+        Raise(nameof(ColumnsUnlocked));
     }
 
     public double Scale => _settings.Scale;
@@ -72,6 +112,8 @@ public sealed class OverlayViewModel : ObservableObject
         Raise(nameof(Scale));
         Raise(nameof(MetricIndex));
         Raise(nameof(MetricLabel));
+        Raise(nameof(MidColHeader));
+        Raise(nameof(ColumnsUnlocked));
     }
 
     public void CycleMetric(int delta)
@@ -120,6 +162,7 @@ public sealed class OverlayViewModel : ObservableObject
             string pct = grand > 0 ? $"({Fmt.Percent((double)value / grand)})" : "";
             bar.CenterText = $"{Fmt.Short(value)}  {pct}";
             bar.DpsText = Fmt.Rate(perSec);
+            _columns.CopyTo(bar);
         }
 
         while (Bars.Count > wanted.Count)

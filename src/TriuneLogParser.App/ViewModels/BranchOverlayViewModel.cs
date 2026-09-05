@@ -22,6 +22,7 @@ public sealed class BranchOverlayViewModel : ObservableObject
     private string _title = "";
     private string _subtitle = "";
     private OverlaySettings _settings = new();
+    private OverlayColumns _columns = new(new OverlaySettings());
 
     public ObservableCollection<OverlayBar> Bars { get; } = new();
 
@@ -31,10 +32,40 @@ public sealed class BranchOverlayViewModel : ObservableObject
     public OverlaySettings Settings
     {
         get => _settings;
-        set { _settings = value; Raise(nameof(Scale)); }
+        set
+        {
+            _settings = value;
+            _columns = new OverlayColumns(value);
+            Raise(nameof(Scale));
+            RaiseColumns();
+        }
     }
 
     public double Scale => _settings.Scale;
+
+    public System.Windows.GridLength NameCol => _columns.Name;
+    public System.Windows.GridLength MidCol => _columns.Mid;
+    public System.Windows.GridLength RateCol => _columns.Rate;
+    public bool ColumnsUnlocked => !_settings.Locked;
+
+    public void SetColumnFractions(double nameFraction, double rateFraction)
+    {
+        _columns.SetFractions(nameFraction, rateFraction);
+        RaiseColumns();
+        foreach (OverlayBar b in Bars)
+            _columns.CopyTo(b);
+    }
+
+    private void RaiseColumns()
+    {
+        Raise(nameof(NameCol));
+        Raise(nameof(MidCol));
+        Raise(nameof(RateCol));
+        Raise(nameof(ColumnsUnlocked));
+    }
+
+    /// <summary>The main overlay owns the lock toggle; keep our splitter-enable binding in sync.</summary>
+    public void NotifyLockChanged() => Raise(nameof(ColumnsUnlocked));
 
     /// <summary>Rebuild the bars for one fighter and the overlay's current metric.</summary>
     public void Update(string fighterName, FighterStats? fighter, double durationSeconds, OverlayMetric metric)
@@ -76,6 +107,7 @@ public sealed class BranchOverlayViewModel : ObservableObject
             int pct = total > 0 ? (int)Math.Round(100.0 * b.Total / total) : 0;
             bar.CenterText = $"{Fmt.Short(b.Total)}  ({pct}%)";
             bar.DpsText = Fmt.Rate(b.Total / s);
+            _columns.CopyTo(bar);
         }
 
         while (Bars.Count > wanted.Count)

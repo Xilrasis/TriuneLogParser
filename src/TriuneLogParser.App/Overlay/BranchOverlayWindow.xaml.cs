@@ -29,6 +29,7 @@ public partial class BranchOverlayWindow : Window
         Height = Math.Clamp(s.BranchHeight, MinHeight, MaxHeight);
 
         ApplyLock(s.Locked);
+        SyncHeaderColumns();
 
         Loaded += (_, _) => _ready = true;
         LocationChanged += (_, _) => Save();
@@ -38,8 +39,30 @@ public partial class BranchOverlayWindow : Window
     /// <summary>Follows the main overlay's lock state (no button of its own).</summary>
     public void ApplyLock(bool locked)
     {
+        if ((ResizeMode == ResizeMode.NoResize) == locked)
+            return; // no change
         ResizeGrip.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
         ResizeMode = locked ? ResizeMode.NoResize : ResizeMode.CanResize;
+        _vm.NotifyLockChanged();
+    }
+
+    private void SyncHeaderColumns()
+    {
+        var s = _vm.Settings;
+        double mid = Math.Max(0.1, 1.0 - s.NameColFraction - s.RateColFraction);
+        HdrName.Width = new GridLength(s.NameColFraction, GridUnitType.Star);
+        HdrMid.Width = new GridLength(mid, GridUnitType.Star);
+        HdrRate.Width = new GridLength(s.RateColFraction, GridUnitType.Star);
+    }
+
+    private void ColumnSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        double total = HdrName.ActualWidth + HdrMid.ActualWidth + HdrRate.ActualWidth;
+        if (total <= 1)
+            return;
+        _vm.SetColumnFractions(HdrName.ActualWidth / total, HdrRate.ActualWidth / total);
+        SyncHeaderColumns();
+        _persist();
     }
 
     private void Root_DragMove(object sender, MouseButtonEventArgs e)
