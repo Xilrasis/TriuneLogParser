@@ -7,6 +7,8 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-05
+
 ### Added
 - **Copy parse summary.** A clipboard button (📋) on the overlay builds a one-line,
   plain-ASCII summary of the bars currently shown — ranked fighters with value, share

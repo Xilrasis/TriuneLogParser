@@ -9,6 +9,6 @@
     <Authors>TriuneLogParser contributors</Authors>
     <Product>TriuneLogParser</Product>
     <!-- Dev-build fallback; CI release builds pass -p:Version=<tag> from the git tag. -->
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 </Project>
