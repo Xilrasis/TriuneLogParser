@@ -16,8 +16,11 @@ public sealed class AppSettings
     /// <summary>Character log file names the user has chosen to follow.</summary>
     public List<string> FollowedLogs { get; set; } = new();
 
-    /// <summary>Idle seconds before an open fight is closed (legacy name for the rest period).</summary>
-    public int IdleTimeoutSeconds { get; set; } = 45;
+    /// <summary>
+    /// Idle seconds before an open fight is closed (legacy name for the rest period).
+    /// Defaults to 0 — one encounter per pull.
+    /// </summary>
+    public int IdleTimeoutSeconds { get; set; }
 
     /// <summary>
     /// Rest period between fights, 0–300 s. A gap this long (with no re-engage) ends an

@@ -20,7 +20,7 @@ public sealed class ParserMetrics
     public void NoteUnparsed(string message)
     {
         UnparsedDamageLike++;
-        string key = Normalize(message);
+        string key = LineShape.Normalize(message);
         if (_unparsedSamples.Count < 200 || _unparsedSamples.ContainsKey(key))
             _unparsedSamples[key] = _unparsedSamples.GetValueOrDefault(key) + 1;
     }
@@ -28,13 +28,4 @@ public sealed class ParserMetrics
     public double Coverage => TimestampedLines > 0
         ? 1.0 - (double)UnparsedDamageLike / TimestampedLines
         : 1.0;
-
-    private static string Normalize(string message)
-    {
-        Span<char> buf = message.Length <= 512 ? stackalloc char[message.Length] : new char[message.Length];
-        int n = 0;
-        foreach (char c in message)
-            buf[n++] = char.IsDigit(c) ? '#' : c;
-        return new string(buf[..n]).Replace("##", "#").Replace("##", "#");
-    }
 }

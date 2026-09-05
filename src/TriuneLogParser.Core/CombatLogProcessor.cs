@@ -26,12 +26,17 @@ public sealed class CombatLogProcessor
     private int _markerIndex;
     private bool _firstEventSeen;
 
+    /// <summary>Optional sink for raw lines the grammar couldn't parse (see <see cref="UnparsedLogWriter"/>).</summary>
+    private readonly Action<string>? _unparsedSink;
+
     public CombatLogProcessor(
         string? characterName,
         EncounterOptions? options = null,
         bool streaming = false,
-        IEnumerable<EncounterMarker>? markers = null)
+        IEnumerable<EncounterMarker>? markers = null,
+        Action<string>? unparsedSink = null)
     {
+        _unparsedSink = unparsedSink;
         var names = new NameResolver(characterName);
         var pets = new PetRegistry();
         _parser = new CombatLogParser(names, pets);
@@ -82,6 +87,7 @@ public sealed class CombatLogProcessor
         if (outcome.UnparsedDamageLike)
         {
             Metrics.NoteUnparsed(line.Message);
+            _unparsedSink?.Invoke(raw);
             return;
         }
 
