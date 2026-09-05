@@ -32,7 +32,7 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <Button Content="Reload (F5)" Command="{Binding ReloadCommand}" Margin="8,0,0,0" />
-                    <Button Content="Clear &amp; tail" Command="{Binding RestartFreshCommand}" Margin="8,0,0,0"
+                    <Button Content="Clear encounter history" Command="{Binding RestartFreshCommand}" Margin="8,0,0,0"
                             ToolTip="Drop all parsed encounters and keep following the log from now (reload with no history lookback)." />
                 </StackPanel>
 

@@ -343,13 +343,16 @@ public sealed partial class CombatLogParser
     [GeneratedRegex(@"^(?<t>.+?) has taken (?<amt>\d+) damage from your (?<sp>.+?)\.$")]
     private static partial Regex DotFromYourRegex();
 
-    [GeneratedRegex(@" (?:has|have) shielded .+? from \d+ points? of damage\.")]
+    // "<caster> has shielded <target> from N points of damage." — a rune / absorb. The
+    // "(Owner: X)" tag strip removes the caster, leaving "has shielded itself from …",
+    // so match "has/have shielded" at a word boundary rather than requiring a subject.
+    [GeneratedRegex(@"\b(?:has|have) shielded .+? from \d+ points? of damage\.")]
     private static partial Regex ShieldedRegex();
 
     [GeneratedRegex(@"^The Spellshield absorbed \d+ of \d+ points? of damage$")]
     private static partial Regex SpellshieldRegex();
 
-    [GeneratedRegex(@"^.+? absorbs? \d+ (?:of \d+ )?points? of damage")]
+    [GeneratedRegex(@"\babsorbs? \d+ (?:of \d+ )?points? of damage")]
     private static partial Regex AbsorbRegex();
 
     [GeneratedRegex(@"You have taken (?<amt>\d+) points? of damage\.$")]

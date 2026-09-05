@@ -229,6 +229,9 @@ public class ParserTests
     [Theory]
     [InlineData("Gnomies has shielded Taruman from 812 points of damage.")]
     [InlineData("The Spellshield absorbed 300 of 300 points of damage")]
+    // pet-owned rune — the "(Owner: X)" strip leaves "has shielded itself from …"
+    [InlineData("Kibalar (Owner: Enitsu) has shielded itself from 951 points of damage. (Runic Strike)")]
+    [InlineData("Kibalar (Owner: Enitsu) absorbs 951 of 951 points of damage")]
     public void Shield_and_absorb_lines_carry_no_damage(string message)
     {
         var parser = new CombatLogParser(new NameResolver("Xilaria"), new PetRegistry());

@@ -161,7 +161,10 @@ real damage is on its own line), MOTD, `Logging to ... is now *ON*`. Damage-abso
 lines carry a "points of damage" number but are **not** damage dealt and are dropped
 so they don't pollute the coverage metric: `<who> has shielded <target> from N points
 of damage.`, `The Spellshield absorbed N of M points of damage`, `<who> absorbs N
-points of damage`.
+points of damage`. A rune's actual mitigation isn't in the log (the "shielded" line
+fires when it's *cast*, and the hit that consumes it doesn't say how much it ate), so
+these can't be credited as healing. Also covers the pet-owned form, where the
+`(Owner: X)` strip leaves `has shielded itself from N points of damage. (<spell>)`.
 
 ## Class inference
 

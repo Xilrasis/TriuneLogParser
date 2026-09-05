@@ -16,8 +16,8 @@ feature-scoped; newest first. Format loosely follows
   open a second "branch" overlay — same style — showing that player's individual
   damage sources as bars, live. It's a separate window so it can be iterated on without
   touching the main overlay.
-- **Clear & tail.** A button on the main window drops all parsed encounters and keeps
-  following the log from now — a reload with no history lookback.
+- **Clear encounter history.** A button on the main window drops all parsed encounters
+  and keeps following the log from now — a reload with no history lookback.
 - **Split the log now.** A button in Settings archives the active log immediately
   (the manual form of the size trigger); the game starts a fresh log on its next write.
 - Grammar misses are appended to `%AppData%/TriuneLogParser/unparsed.log` — one real
@@ -26,6 +26,11 @@ feature-scoped; newest first. Format loosely follows
 ### Changed
 - The default rest period is now **0** (one encounter per pull). Existing settings are
   unchanged.
+
+### Fixed
+- Pet-owned rune / absorb lines (`<pet> (Owner: X) has shielded itself from N points of
+  damage.`) were counted as grammar misses — the `(Owner: X)` strip removes the caster,
+  so the rule no longer required one.
 
 ## [0.2.0] - 2026-09-04
 
