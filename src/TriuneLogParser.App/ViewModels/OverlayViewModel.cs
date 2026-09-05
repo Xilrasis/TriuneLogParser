@@ -45,6 +45,8 @@ public sealed class OverlayViewModel : ObservableObject
     private string _subtitle = "";
     private OverlaySettings _settings = new();
     private double _nameW = 140, _midW = 120, _dpsW = 78;
+    private double _lastDurationSeconds;
+    private long _lastGrandTotal;
 
     public ObservableCollection<OverlayBar> Bars { get; } = new();
 
@@ -94,6 +96,8 @@ public sealed class OverlayViewModel : ObservableObject
             Bars.Clear();
             Title = "Waiting for combat…";
             Subtitle = "";
+            _lastGrandTotal = 0;
+            _lastDurationSeconds = 0;
             return;
         }
 
@@ -105,7 +109,7 @@ public sealed class OverlayViewModel : ObservableObject
         NameW = Math.Clamp((contentW - DpsW) * 0.42, 70, 170);
         MidW = Math.Max(60, contentW - DpsW - NameW);
 
-        string dur = TimeSpan.FromSeconds(durationSeconds).ToString(durationSeconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
+        string dur = FormatDuration(durationSeconds);
         Subtitle = $"{(active ? "● " : "")}{dur} · {MetricLabel}";
 
         List<(string name, long value, double perSec)> rows = BuildRows(report, durationSeconds);
@@ -114,6 +118,8 @@ public sealed class OverlayViewModel : ObservableObject
         // reconcile by position/name to avoid flicker
         var wanted = rows.Take(_settings.MaxRows).ToList();
         long grand = rows.Sum(r => r.value);
+        _lastGrandTotal = grand;
+        _lastDurationSeconds = durationSeconds;
         for (int i = 0; i < wanted.Count; i++)
         {
             (string name, long value, double perSec) = wanted[i];
@@ -132,6 +138,47 @@ public sealed class OverlayViewModel : ObservableObject
         while (Bars.Count > wanted.Count)
             Bars.RemoveAt(Bars.Count - 1);
     }
+
+    /// <summary>
+    /// A single-line summary of the bars currently shown, safe to paste into EverQuest
+    /// chat: plain ASCII only (EQ's bitmap font doesn't render most Unicode symbols,
+    /// including the ones used in this app's own UI) and capped well under any
+    /// channel's line-length limit, dropping the lowest contributors first.
+    /// </summary>
+    public string BuildChatSummary()
+    {
+        if (Bars.Count == 0)
+            return "No parse data yet.";
+
+        string header = $"{Title} ({FormatDuration(_lastDurationSeconds)}) {MetricLabel} -";
+        string footer = _lastGrandTotal > 0
+            ? $" | Total {Fmt.Short(_lastGrandTotal)} @ {Fmt.Rate(_lastGrandTotal / Math.Max(1, _lastDurationSeconds))}"
+            : "";
+
+        const int budget = 480; // comfortably under every EQ chat channel's line limit
+        var chunks = new List<string>();
+        int used = header.Length + footer.Length;
+
+        foreach (OverlayBar b in Bars)
+        {
+            int pct = _lastGrandTotal > 0 ? (int)Math.Round(100.0 * b.Value / _lastGrandTotal) : 0;
+            string chunk = $"{b.Name} {Fmt.Short(b.Value)} ({pct}%) {b.DpsText}";
+            int add = chunk.Length + (chunks.Count > 0 ? 2 : 0);
+            if (used + add > budget && chunks.Count > 0)
+                break;
+            chunks.Add(chunk);
+            used += add;
+        }
+
+        string body = string.Join(", ", chunks);
+        if (chunks.Count < Bars.Count)
+            body += $" (+{Bars.Count - chunks.Count} more)";
+
+        return $"{header} {body}{footer}";
+    }
+
+    private static string FormatDuration(double seconds) =>
+        TimeSpan.FromSeconds(seconds).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
 
     private OverlayBar GetOrCreate(string name, int index)
     {

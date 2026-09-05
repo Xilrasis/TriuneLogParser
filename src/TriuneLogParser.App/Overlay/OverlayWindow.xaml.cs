@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using TriuneLogParser.App.ViewModels;
 using TriuneLogParser.Core.Config;
 
@@ -71,6 +72,32 @@ public partial class OverlayWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
     private void Split_Click(object sender, RoutedEventArgs e) => _onSplit();
+
+    private void Copy_Click(object sender, RoutedEventArgs e)
+    {
+        string ok;
+        try
+        {
+            System.Windows.Clipboard.SetText(_vm.BuildChatSummary());
+            ok = "✓";
+        }
+        catch
+        {
+            // Another app can transiently hold the clipboard open; nothing to do but let the user retry.
+            ok = "✕";
+        }
+
+        FlashButton(CopyButton, ok);
+    }
+
+    private static void FlashButton(Button button, string glyph)
+    {
+        object original = button.Content;
+        button.Content = glyph;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+        timer.Tick += (_, _) => { button.Content = original; timer.Stop(); };
+        timer.Start();
+    }
 
     private void MetricPrev_Click(object sender, RoutedEventArgs e) { _vm.CycleMetric(-1); _persist(); }
     private void MetricNext_Click(object sender, RoutedEventArgs e) { _vm.CycleMetric(1); _persist(); }

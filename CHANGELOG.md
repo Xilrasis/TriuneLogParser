@@ -7,6 +7,12 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **Copy parse summary.** A clipboard button (📋) on the overlay builds a one-line,
+  plain-ASCII summary of the bars currently shown — ranked fighters with value, share
+  and rate, plus a raid total — sized to paste straight into an EverQuest chat channel.
+  Truncates by dropping the lowest contributors first if it would run long.
+
 ## [0.2.0] - 2026-09-04
 
 ### Added
