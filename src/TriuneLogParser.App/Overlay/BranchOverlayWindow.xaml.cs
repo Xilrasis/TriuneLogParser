@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using TriuneLogParser.App.ViewModels;
 
@@ -20,10 +21,12 @@ public partial class BranchOverlayWindow : Window
         DataContext = _vm;
 
         var s = _vm.Settings;
+        MaxHeight = SystemParameters.WorkArea.Height;
+        MaxWidth = SystemParameters.WorkArea.Width;
         Left = s.BranchLeft;
         Top = s.BranchTop;
-        Width = Math.Clamp(s.BranchWidth, 160, 1200);
-        MaxHeight = SystemParameters.WorkArea.Height * 0.92; // scroll the bar list past this
+        Width = Math.Clamp(s.BranchWidth, MinWidth, MaxWidth);
+        Height = Math.Clamp(s.BranchHeight, MinHeight, MaxHeight);
 
         Loaded += (_, _) => _ready = true;
         LocationChanged += (_, _) => Save();
@@ -40,6 +43,12 @@ public partial class BranchOverlayWindow : Window
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
+    private void ResizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        Width = Math.Clamp(Width + e.HorizontalChange, MinWidth, MaxWidth);
+        Height = Math.Clamp(Height + e.VerticalChange, MinHeight, MaxHeight);
+    }
+
     private void Save()
     {
         if (!_ready || WindowState != WindowState.Normal)
@@ -48,6 +57,8 @@ public partial class BranchOverlayWindow : Window
         _vm.Settings.BranchLeft = Left;
         _vm.Settings.BranchTop = Top;
         _vm.Settings.BranchWidth = Width;
+        if (!double.IsNaN(Height))
+            _vm.Settings.BranchHeight = Height;
         _persist();
     }
 

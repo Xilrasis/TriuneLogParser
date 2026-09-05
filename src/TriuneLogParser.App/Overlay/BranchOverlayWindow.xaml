@@ -4,10 +4,11 @@
         xmlns:vm="clr-namespace:TriuneLogParser.App.ViewModels"
         Title="TriuneLogParser — player breakdown"
         WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False"
-        Topmost="True" ResizeMode="CanResize" SizeToContent="Height"
-        Background="Transparent" MinWidth="180" MinHeight="50"
+        Topmost="True" ResizeMode="CanResize"
+        Background="Transparent" MinWidth="180" MinHeight="60"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
 
+  <Grid>
     <Border x:Name="Root" CornerRadius="6" Background="#1b1c1f" BorderBrush="#8a6d3b" BorderThickness="1"
             MouseLeftButtonDown="Root_DragMove">
         <Border.LayoutTransform>
@@ -70,4 +71,7 @@
             </ScrollViewer>
         </DockPanel>
     </Border>
+
+    <Thumb x:Name="ResizeGrip" Style="{StaticResource OverlayResizeGrip}" DragDelta="ResizeGrip_DragDelta" />
+  </Grid>
 </Window>

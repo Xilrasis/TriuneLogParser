@@ -88,6 +88,32 @@
             </Setter>
         </Style>
 
+        <!-- bottom-right resize handle for the overlays -->
+        <Style x:Key="OverlayResizeGrip" TargetType="Thumb">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Cursor" Value="SizeNWSE" />
+            <Setter Property="Opacity" Value="0.45" />
+            <Setter Property="ToolTip" Value="Drag to resize" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Path Stroke="#c8c8c8" StrokeThickness="1.4" SnapsToDevicePixels="True"
+                                  Data="M 14,4 L 4,14  M 14,8 L 8,14  M 14,12 L 12,14" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- lightweight scrollbar for the overlays: 7px, no arrows, rounded translucent thumb -->
         <Style x:Key="OverlayScrollBar" TargetType="ScrollBar">
             <Setter Property="Width" Value="7" />

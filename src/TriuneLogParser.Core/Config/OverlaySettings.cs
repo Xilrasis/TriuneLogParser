@@ -43,15 +43,17 @@ public sealed class OverlaySettings
     public double BranchLeft { get; set; } = 380;
     public double BranchTop { get; set; } = 40;
     public double BranchWidth { get; set; } = 320;
+    public double BranchHeight { get; set; } = 240;
 
     public OverlaySettings Clamp()
     {
         Opacity = Math.Clamp(Opacity, 0.05, 1.0);
         Scale = Math.Clamp(Scale, 0.7, 2.0);
         MaxRows = Math.Clamp(MaxRows, 1, 30);
-        Width = Math.Clamp(Width, 160, 1200);
-        Height = Math.Clamp(Height, 90, 1400);
-        BranchWidth = Math.Clamp(BranchWidth, 160, 1200);
+        Width = Math.Clamp(Width, 160, 1600);
+        Height = Math.Clamp(Height, 90, 1600);
+        BranchWidth = Math.Clamp(BranchWidth, 160, 1600);
+        BranchHeight = Math.Clamp(BranchHeight, 90, 1600);
         return this;
     }
 }

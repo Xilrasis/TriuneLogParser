@@ -26,9 +26,10 @@ feature-scoped; newest first. Format loosely follows
 ### Changed
 - The default rest period is now **0** (one encounter per pull). Existing settings are
   unchanged.
-- Both overlays now cap their height at the screen and scroll the bar list past that,
-  with a thin (7px), auto-dimming scrollbar — a high row count no longer runs the
-  window off-screen.
+- Both overlays are now drag-resizable (a handle in the bottom-right corner) and
+  remember their size as well as their position. They cap at the screen and scroll the
+  bar list past that, with a thin (7px), auto-dimming scrollbar — a high row count no
+  longer runs the window off-screen.
 
 ### Fixed
 - Pet-owned rune / absorb lines (`<pet> (Owner: X) has shielded itself from N points of

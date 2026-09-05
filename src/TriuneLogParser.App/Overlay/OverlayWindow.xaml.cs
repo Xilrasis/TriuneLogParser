@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -29,12 +30,12 @@ public partial class OverlayWindow : Window
         DataContext = _vm;
 
         OverlaySettings s = _vm.Settings.Clamp();
+        MaxHeight = SystemParameters.WorkArea.Height;
+        MaxWidth = SystemParameters.WorkArea.Width;
         Left = s.Left;
         Top = s.Top;
         Width = s.Width;
-        // Height follows SizeToContent="Height" but never past the screen — the bar list
-        // scrolls beyond that.
-        MaxHeight = SystemParameters.WorkArea.Height * 0.92;
+        Height = s.Height; // user-resizable; the bar list scrolls when it doesn't fit
         Root.Background = new System.Windows.Media.SolidColorBrush(
             System.Windows.Media.Color.FromArgb((byte)(s.Opacity * 255), 0x1b, 0x1c, 0x1f));
 
@@ -72,6 +73,13 @@ public partial class OverlayWindow : Window
         SettingsPanel.Visibility = SettingsPanel.Visibility == Visibility.Visible
             ? Visibility.Collapsed
             : Visibility.Visible;
+
+    private void ResizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        Width = Math.Clamp(Width + e.HorizontalChange, MinWidth, MaxWidth);
+        Height = Math.Clamp(Height + e.VerticalChange, MinHeight, MaxHeight);
+        // SizeChanged -> Save() persists it.
+    }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
@@ -159,6 +167,8 @@ public partial class OverlayWindow : Window
             s.Left = Left;
             s.Top = Top;
             s.Width = Width;
+            if (!double.IsNaN(Height))
+                s.Height = Height;
         }
 
         s.Shown = IsVisible;
