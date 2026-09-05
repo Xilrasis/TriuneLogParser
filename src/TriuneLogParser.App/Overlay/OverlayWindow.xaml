@@ -78,7 +78,9 @@
                 </ItemsControl.Resources>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:OverlayBar}">
-                        <Border Height="22" Margin="0,2" CornerRadius="3" Background="#202226" ClipToBounds="True">
+                        <Border Height="22" Margin="0,2" CornerRadius="3" Background="#202226" ClipToBounds="True"
+                                Cursor="Hand" ToolTip="Click for this player's damage sources (experimental)"
+                                MouseLeftButtonDown="Bar_MouseDown" MouseLeftButtonUp="Bar_MouseUp">
                             <Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>

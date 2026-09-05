@@ -7,6 +7,7 @@ namespace TriuneLogParser.App;
 public partial class SettingsWindow : Window
 {
     private readonly AppSettings _settings;
+    private readonly Func<(bool ok, string message)>? _archiveNow;
 
     /// <summary>What changed, so the caller can react (e.g. re-parse on a rest-period change).</summary>
     public bool RestPeriodChanged { get; private set; }
@@ -18,9 +19,11 @@ public partial class SettingsWindow : Window
     private readonly int _origRetro;
     private readonly string? _origFolder;
 
-    public SettingsWindow(AppSettings settings)
+    public SettingsWindow(AppSettings settings, string? currentLogPath = null,
+        Func<(bool ok, string message)>? archiveNow = null)
     {
         _settings = settings;
+        _archiveNow = archiveNow;
         _origRest = settings.RestPeriodSeconds;
         _origRetro = settings.RetroParseMinutes;
         _origFolder = settings.EverQuestFolder;
@@ -33,6 +36,23 @@ public partial class SettingsWindow : Window
         SelectRetro(settings.RetroParseMinutes);
         SplitCheck.IsChecked = settings.LogSplitEnabled;
         SplitSizeBox.Text = settings.LogSplitSizeMb.ToString();
+
+        bool canSplitNow = archiveNow is not null && !string.IsNullOrEmpty(currentLogPath);
+        SplitNowButton.IsEnabled = canSplitNow;
+        SplitNowResult.Text = canSplitNow
+            ? System.IO.Path.GetFileName(currentLogPath)
+            : "Start monitoring a character first.";
+    }
+
+    private void SplitNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_archiveNow is null)
+            return;
+
+        SplitNowButton.IsEnabled = false;
+        (bool ok, string message) = _archiveNow();
+        SplitNowResult.Text = message;
+        SplitNowButton.IsEnabled = !ok; // one archive is enough until there's a fresh log
     }
 
     private void RestSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateRestLabel();

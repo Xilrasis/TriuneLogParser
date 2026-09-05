@@ -28,7 +28,8 @@ running the RoF2 client whose log wording is different enough that mainstream pa
   re-parsing reproduces it.
 - **Time-range grouping.** Merge any set of encounters into one aggregate view.
 - **Always-on-top overlay** — draggable damage-meter bars pinned over the game, with a
-  click-through mode.
+  click-through mode, a one-click chat-ready summary, and (experimental) a click-through
+  to any player's per-source breakdown.
 
 ## Requirements
 

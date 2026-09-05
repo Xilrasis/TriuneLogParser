@@ -14,15 +14,17 @@ public partial class OverlayWindow : Window
     private readonly OverlayViewModel _vm;
     private readonly Action _persist;
     private readonly Action _onSplit;
+    private readonly Action<string> _onBranch;
     private bool _loading = true;
     private bool _ready;
     private bool _forceClose;
 
-    public OverlayWindow(OverlayViewModel vm, Action persist, Action onSplit)
+    public OverlayWindow(OverlayViewModel vm, Action persist, Action onSplit, Action<string> onBranch)
     {
         _vm = vm;
         _persist = persist;
         _onSplit = onSplit;
+        _onBranch = onBranch;
         InitializeComponent();
         DataContext = _vm;
 
@@ -72,6 +74,16 @@ public partial class OverlayWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
     private void Split_Click(object sender, RoutedEventArgs e) => _onSplit();
+
+    // A bar row is a click target for the branch breakdown; swallow the down so it
+    // doesn't start a window drag, act on the up.
+    private void Bar_MouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
+    private void Bar_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: OverlayBar bar })
+            _onBranch(bar.Name);
+    }
 
     private void Copy_Click(object sender, RoutedEventArgs e)
     {

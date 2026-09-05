@@ -177,3 +177,7 @@ out.
 The parser tracks how many timestamped lines looked damage-related but matched no rule
 (`triuneparse <log> --unparsed`). Against the two reference logs (~160k and ~140k
 lines) coverage is 100%. Any regression here is a bug — add a rule.
+
+The desktop app also appends each distinct unparsed line shape to
+`%AppData%/TriuneLogParser/unparsed.log` while monitoring, so real misses from live
+play can be collected and turned into fixtures + rules.

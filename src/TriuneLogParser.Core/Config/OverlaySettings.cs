@@ -39,6 +39,11 @@ public sealed class OverlaySettings
     /// <summary>Show the encounter title / duration header.</summary>
     public bool ShowHeader { get; set; } = true;
 
+    // ---- experimental "branch" overlay (per-player source breakdown) ----
+    public double BranchLeft { get; set; } = 380;
+    public double BranchTop { get; set; } = 40;
+    public double BranchWidth { get; set; } = 320;
+
     public OverlaySettings Clamp()
     {
         Opacity = Math.Clamp(Opacity, 0.05, 1.0);
@@ -46,6 +51,7 @@ public sealed class OverlaySettings
         MaxRows = Math.Clamp(MaxRows, 1, 30);
         Width = Math.Clamp(Width, 160, 1200);
         Height = Math.Clamp(Height, 90, 1400);
+        BranchWidth = Math.Clamp(BranchWidth, 160, 1200);
         return this;
     }
 }

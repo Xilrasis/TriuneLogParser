@@ -71,7 +71,7 @@ public partial class MainWindow : Window
 
     private (bool, bool, bool, bool) ShowSettingsDialog(TriuneLogParser.Core.Config.AppSettings settings)
     {
-        var dlg = new SettingsWindow(settings) { Owner = this };
+        var dlg = new SettingsWindow(settings, _vm.CurrentLogPath, _vm.ArchiveLogNow) { Owner = this };
         dlg.ShowDialog();
         return (dlg.Saved, dlg.RestPeriodChanged, dlg.RetroChanged, dlg.FolderChanged);
     }

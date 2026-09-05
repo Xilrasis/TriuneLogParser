@@ -28,6 +28,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private OverlayWindow? _overlayWindow;
     private bool _overlayVisible;
 
+    private readonly BranchOverlayViewModel _branchVm = new();
+    private BranchOverlayWindow? _branchWindow;
+    private string? _branchFighter;
+
     public MainViewModel()
     {
         _settings = AppSettings.Load();
@@ -38,6 +42,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ChangeFolderCommand = new RelayCommand(ChangeFolder);
         FollowLiveCommand = new RelayCommand(() => { AutoFollow = true; Refresh(); });
         ReloadCommand = new RelayCommand(ReloadCurrent, () => SelectedCharacter is not null);
+        RestartFreshCommand = new RelayCommand(RestartFresh, () => SelectedCharacter is not null);
         ToggleOverlayCommand = new RelayCommand(() => OverlayVisible = !OverlayVisible);
         ToggleClickThroughCommand = new RelayCommand(ToggleOverlayClickThrough, () => OverlayVisible);
         SettingsCommand = new RelayCommand(OpenSettings);
@@ -87,6 +92,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _service.Start(c.Path, c.Character);
     }
 
+    /// <summary>Path of the log currently being followed, or null.</summary>
+    public string? CurrentLogPath => _service.LogPath;
+
+    /// <summary>Archive the followed log now (Settings → "Split the log now").</summary>
+    public (bool ok, string message) ArchiveLogNow()
+    {
+        Core.Logging.LogArchiver.Result r = _service.ArchiveLogNow();
+        if (r.Split)
+            return (true, $"Archived to {System.IO.Path.GetFileName(r.ArchivePath)}. The game starts a fresh log on its next write.");
+        return (false, r.Error ?? "Nothing to archive.");
+    }
+
     private void ApplyServiceSettings()
     {
         _service.Configure(EncounterOptions.ForRestPeriod(_settings.RestPeriodSeconds));
@@ -118,13 +135,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
             if (value)
             {
-                _overlayWindow ??= new OverlayWindow(_overlayVm, PersistOverlay, SplitFight);
+                _overlayWindow ??= new OverlayWindow(_overlayVm, PersistOverlay, SplitFight, OpenBranch);
                 _overlayWindow.Show();
                 UpdateOverlay();
             }
             else
             {
                 _overlayWindow?.Hide();
+                _branchWindow?.Hide();
             }
 
             _settings.Overlay.Shown = value;
@@ -153,6 +171,39 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         (EncounterReport? report, string? title, double seconds, bool active) = _service.CurrentOrLatest();
         _overlayVm.Update(report, title, seconds, active);
+        UpdateBranch(report, seconds);
+    }
+
+    // ---- experimental "branch" overlay (per-player source breakdown) ----
+
+    private void OpenBranch(string fighterName)
+    {
+        _branchFighter = fighterName;
+        _branchVm.Settings = _settings.Overlay;
+        _branchWindow ??= new BranchOverlayWindow(_branchVm, PersistOverlay);
+        _branchWindow.Show();
+
+        (EncounterReport? report, _, double seconds, _) = _service.CurrentOrLatest();
+        UpdateBranch(report, seconds);
+    }
+
+    private void UpdateBranch(EncounterReport? report, double seconds)
+    {
+        if (_branchWindow is not { IsVisible: true } || _branchFighter is null)
+            return;
+
+        OverlayMetric metric = _settings.Overlay.Metric;
+        IReadOnlyList<FighterStats> src = metric switch
+        {
+            OverlayMetric.DamageTaken => report?.DamageTaken ?? Array.Empty<FighterStats>(),
+            OverlayMetric.Healing => report?.Healing ?? Array.Empty<FighterStats>(),
+            _ => report?.DamageDone ?? Array.Empty<FighterStats>(),
+        };
+
+        FighterStats? fighter = src.FirstOrDefault(f =>
+            string.Equals(f.Name, _branchFighter, StringComparison.OrdinalIgnoreCase));
+
+        _branchVm.Update(_branchFighter, fighter, seconds, metric);
     }
 
     // ---- folder / character selection -----------------------------------------
@@ -185,6 +236,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand ChangeFolderCommand { get; }
     public ICommand FollowLiveCommand { get; }
     public ICommand ReloadCommand { get; }
+    public ICommand RestartFreshCommand { get; }
 
     public void ChangeFolder()
     {
@@ -224,6 +276,23 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         if (SelectedCharacter is { } c)
             _service.Start(c.Path, c.Character);
+    }
+
+    /// <summary>
+    /// Drop all parsed history and keep tailing from here — reload the current log with
+    /// no retroactive lookback.
+    /// </summary>
+    private void RestartFresh()
+    {
+        if (SelectedCharacter is not { } c)
+            return;
+
+        Encounters.Clear();
+        _selectedIds = Array.Empty<int>();
+        ClearBreakdown();
+        _autoFollow = true;
+        Raise(nameof(AutoFollow));
+        _service.Start(c.Path, c.Character, retroMinutesOverride: 0);
     }
 
     // ---- encounter list ------------------------------------------------------
@@ -474,6 +543,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             w.PersistNow();
             w.ForceClose();
         }
+        _branchWindow?.ForceClose();
         _settings.Save();
         _service.Dispose();
     }

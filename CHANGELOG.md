@@ -12,6 +12,20 @@ feature-scoped; newest first. Format loosely follows
   plain-ASCII summary of the bars currently shown — ranked fighters with value, share
   and rate, plus a raid total — sized to paste straight into an EverQuest chat channel.
   Truncates by dropping the lowest contributors first if it would run long.
+- **Player breakdown in the overlay (experimental).** Click a bar in the overlay to
+  open a second "branch" overlay — same style — showing that player's individual
+  damage sources as bars, live. It's a separate window so it can be iterated on without
+  touching the main overlay.
+- **Clear & tail.** A button on the main window drops all parsed encounters and keeps
+  following the log from now — a reload with no history lookback.
+- **Split the log now.** A button in Settings archives the active log immediately
+  (the manual form of the size trigger); the game starts a fresh log on its next write.
+- Grammar misses are appended to `%AppData%/TriuneLogParser/unparsed.log` — one real
+  example of each distinct unparsed line shape, for filling in missing rules.
+
+### Changed
+- The default rest period is now **0** (one encounter per pull). Existing settings are
+  unchanged.
 
 ## [0.2.0] - 2026-09-04
 

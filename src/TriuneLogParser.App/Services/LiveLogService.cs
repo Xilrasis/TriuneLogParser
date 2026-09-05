@@ -33,11 +33,22 @@ public sealed class LiveLogService : IDisposable
     private long _generation;
     private readonly Dictionary<int, EncounterSummary> _summaryCache = new();
 
+    /// <summary>Records grammar misses to <c>%AppData%/TriuneLogParser/unparsed.log</c>.</summary>
+    private readonly UnparsedLogWriter _unparsed = new(System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "TriuneLogParser", "unparsed.log"));
+
     public string? Character { get; private set; }
     public string? LogPath { get; private set; }
 
+    /// <summary>Where unparsed damage-like lines are being logged.</summary>
+    public string UnparsedLogPath => _unparsed.Path;
+
     /// <summary>How far back to parse on start; 0 = only lines appended after start.</summary>
     public int RetroParseMinutes { get; set; } = 30;
+
+    /// <summary>Set by <see cref="Start"/> for one run to override <see cref="RetroParseMinutes"/>.</summary>
+    private int? _retroOverride;
 
     /// <summary>&gt;0 to archive the followed log when it passes this size (bytes).</summary>
     public long LogSplitBytes { get; set; }
@@ -50,7 +61,12 @@ public sealed class LiveLogService : IDisposable
 
     public void Configure(EncounterOptions options) => _options = options;
 
-    public void Start(string logPath, string? character)
+    /// <summary>
+    /// Begin (or restart) following <paramref name="logPath"/>. Pass
+    /// <paramref name="retroMinutesOverride"/> to override <see cref="RetroParseMinutes"/>
+    /// for this run only — e.g. 0 to drop history and tail from here.
+    /// </summary>
+    public void Start(string logPath, string? character, int? retroMinutesOverride = null)
     {
         Stop();
 
@@ -61,7 +77,8 @@ public sealed class LiveLogService : IDisposable
 
         lock (_gate)
         {
-            _processor = new CombatLogProcessor(character, _options, streaming: true, markers);
+            _retroOverride = retroMinutesOverride;
+            _processor = new CombatLogProcessor(character, _options, streaming: true, markers, _unparsed.Append);
             _summaryCache.Clear();
             _loading = true;
             Character = character;
@@ -96,7 +113,9 @@ public sealed class LiveLogService : IDisposable
         {
             var tailer = new LogFileTailer(path, TimeSpan.FromMilliseconds(750));
 
-            int retro = RetroParseMinutes;
+            int retro;
+            lock (_gate)
+                retro = _retroOverride ?? RetroParseMinutes;
             if (retro <= 0)
             {
                 // Active log only.
@@ -201,6 +220,28 @@ public sealed class LiveLogService : IDisposable
     {
         try { return MarkerStore.LoadForLog(logPath); }
         catch { return Array.Empty<EncounterMarker>(); }
+    }
+
+    /// <summary>
+    /// Archive the log being monitored right now, regardless of size — the manual
+    /// equivalent of the size trigger. The tailer picks up the fresh log the game
+    /// writes next; the in-memory parse is untouched.
+    /// </summary>
+    public LogArchiver.Result ArchiveLogNow()
+    {
+        string? path;
+        lock (_gate)
+            path = LogPath;
+
+        if (string.IsNullOrEmpty(path))
+            return new LogArchiver.Result(false, null, "No log is being monitored.");
+
+        LogArchiver.Result r = LogArchiver.TrySplit(path, maxBytes: 1);
+        if (r.Split)
+            Notice?.Invoke($"Log archived to {System.IO.Path.GetFileName(r.ArchivePath)}");
+        else if (r.Error != null)
+            Notice?.Invoke($"Archive failed: {r.Error}");
+        return r;
     }
 
     public LiveSnapshot GetSnapshot()
