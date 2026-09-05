@@ -48,7 +48,23 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) => { _ready = true; };
         LocationChanged += (_, _) => Save();
         SizeChanged += (_, _) => Save();
+        ApplyLock(s.Locked);
         _loading = false;
+    }
+
+    private void Lock_Click(object sender, RoutedEventArgs e)
+    {
+        ApplyLock(!_vm.Settings.Locked);
+        _persist();
+    }
+
+    private void ApplyLock(bool locked)
+    {
+        _vm.Settings.Locked = locked;
+        LockButton.Content = locked ? "🔒" : "🔓";
+        LockButton.ToolTip = locked ? "Unlock position and size" : "Lock position and size";
+        ResizeGrip.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+        ResizeMode = locked ? ResizeMode.NoResize : ResizeMode.CanResize;
     }
 
     public void SetClickThrough(bool on)
@@ -63,7 +79,7 @@ public partial class OverlayWindow : Window
 
     private void Root_DragMove(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed && !_vm.Settings.ClickThrough)
+        if (e.ButtonState == MouseButtonState.Pressed && !_vm.Settings.ClickThrough && !_vm.Settings.Locked)
         {
             try { DragMove(); } catch { /* ignore rapid clicks */ }
         }
@@ -76,6 +92,8 @@ public partial class OverlayWindow : Window
 
     private void ResizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
     {
+        if (_vm.Settings.Locked)
+            return;
         Width = Math.Clamp(Width + e.HorizontalChange, MinWidth, MaxWidth);
         Height = Math.Clamp(Height + e.VerticalChange, MinHeight, MaxHeight);
         // SizeChanged -> Save() persists it.

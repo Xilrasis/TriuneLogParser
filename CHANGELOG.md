@@ -30,6 +30,10 @@ feature-scoped; newest first. Format loosely follows
   remember their size as well as their position. They cap at the screen and scroll the
   bar list past that, with a thin (7px), auto-dimming scrollbar — a high row count no
   longer runs the window off-screen.
+- Overlay bar columns are proportional now — they shrink and grow with the window
+  instead of overflowing the right edge when it's narrowed.
+- A **lock** toggle (🔒) in the overlay titlebar pins position and size — no drag-move,
+  no resize — for the overlay and its player-breakdown popup. Persisted.
 
 ### Fixed
 - Pet-owned rune / absorb lines (`<pet> (Owner: X) has shielded itself from N points of

@@ -28,6 +28,9 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
                     <TextBlock Text="{Binding Subtitle}" Foreground="#9aa0a6" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Button x:Name="LockButton" Content="🔓" Width="18" Height="18" Padding="0" FontSize="10" Click="Lock_Click"
+                            ToolTip="Lock position and size"
+                            Background="Transparent" Foreground="#9aa0a6" BorderThickness="0" Cursor="Hand" />
                     <Button x:Name="CopyButton" Content="📋" Width="18" Height="18" Padding="0" FontSize="10" Click="Copy_Click"
                             ToolTip="Copy a chat-ready summary to the clipboard"
                             Background="Transparent" Foreground="#9aa0a6" BorderThickness="0" Cursor="Hand" />
@@ -94,18 +97,22 @@
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Background="{Binding Color}" Opacity="0.55" />
                                 </Grid>
-                                <StackPanel Orientation="Horizontal" Margin="7,0,7,0"
-                                            Width="{Binding ActualWidth, ElementName=BarList}">
-                                    <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Width="118"
+                                <Grid Margin="7,0,7,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="118*" />
+                                        <ColumnDefinition Width="150*" />
+                                        <ColumnDefinition Width="90*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="12"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                Effect="{StaticResource TextShadow}" />
-                                    <TextBlock Text="{Binding CenterText}" Foreground="#eef0f2" FontFamily="Consolas" FontSize="11"
-                                               VerticalAlignment="Center" TextAlignment="Center" Width="150"
+                                    <TextBlock Grid.Column="1" Text="{Binding CenterText}" Foreground="#eef0f2" FontFamily="Consolas" FontSize="11"
+                                               VerticalAlignment="Center" TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                                Effect="{StaticResource TextShadow}" />
-                                    <TextBlock Text="{Binding DpsText}" Foreground="White" FontWeight="SemiBold" FontFamily="Consolas"
-                                               FontSize="12" VerticalAlignment="Center" Width="90"
+                                    <TextBlock Grid.Column="2" Text="{Binding DpsText}" Foreground="White" FontWeight="SemiBold" FontFamily="Consolas"
+                                               FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                Effect="{StaticResource TextShadow}" />
-                                </StackPanel>
+                                </Grid>
                             </Grid>
                         </Border>
                     </DataTemplate>

@@ -192,6 +192,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (_branchWindow is not { IsVisible: true } || _branchFighter is null)
             return;
 
+        _branchWindow.ApplyLock(_settings.Overlay.Locked);
+
         OverlayMetric metric = _settings.Overlay.Metric;
         IReadOnlyList<FighterStats> src = metric switch
         {

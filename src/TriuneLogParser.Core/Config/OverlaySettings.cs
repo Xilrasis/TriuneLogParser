@@ -36,6 +36,9 @@ public sealed class OverlaySettings
     /// <summary>Mouse events pass through to the game behind the overlay.</summary>
     public bool ClickThrough { get; set; }
 
+    /// <summary>Position and size are pinned — no drag-move, no resize.</summary>
+    public bool Locked { get; set; }
+
     /// <summary>Show the encounter title / duration header.</summary>
     public bool ShowHeader { get; set; } = true;
 

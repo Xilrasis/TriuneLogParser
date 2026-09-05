@@ -28,14 +28,23 @@ public partial class BranchOverlayWindow : Window
         Width = Math.Clamp(s.BranchWidth, MinWidth, MaxWidth);
         Height = Math.Clamp(s.BranchHeight, MinHeight, MaxHeight);
 
+        ApplyLock(s.Locked);
+
         Loaded += (_, _) => _ready = true;
         LocationChanged += (_, _) => Save();
         SizeChanged += (_, _) => Save();
     }
 
+    /// <summary>Follows the main overlay's lock state (no button of its own).</summary>
+    public void ApplyLock(bool locked)
+    {
+        ResizeGrip.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+        ResizeMode = locked ? ResizeMode.NoResize : ResizeMode.CanResize;
+    }
+
     private void Root_DragMove(object sender, MouseButtonEventArgs e)
     {
-        if (e.ButtonState == MouseButtonState.Pressed)
+        if (e.ButtonState == MouseButtonState.Pressed && !_vm.Settings.Locked)
         {
             try { DragMove(); } catch { /* ignore rapid clicks */ }
         }
@@ -45,6 +54,8 @@ public partial class BranchOverlayWindow : Window
 
     private void ResizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
     {
+        if (_vm.Settings.Locked)
+            return;
         Width = Math.Clamp(Width + e.HorizontalChange, MinWidth, MaxWidth);
         Height = Math.Clamp(Height + e.VerticalChange, MinHeight, MaxHeight);
     }
