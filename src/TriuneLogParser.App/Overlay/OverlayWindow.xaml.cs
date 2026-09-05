@@ -32,7 +32,9 @@ public partial class OverlayWindow : Window
         Left = s.Left;
         Top = s.Top;
         Width = s.Width;
-        // Height is driven by SizeToContent="Height".
+        // Height follows SizeToContent="Height" but never past the screen — the bar list
+        // scrolls beyond that.
+        MaxHeight = SystemParameters.WorkArea.Height * 0.92;
         Root.Background = new System.Windows.Media.SolidColorBrush(
             System.Windows.Media.Color.FromArgb((byte)(s.Opacity * 255), 0x1b, 0x1c, 0x1f));
 

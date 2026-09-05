@@ -23,6 +23,7 @@ public partial class BranchOverlayWindow : Window
         Left = s.BranchLeft;
         Top = s.BranchTop;
         Width = Math.Clamp(s.BranchWidth, 160, 1200);
+        MaxHeight = SystemParameters.WorkArea.Height * 0.92; // scroll the bar list past this
 
         Loaded += (_, _) => _ready = true;
         LocationChanged += (_, _) => Save();

@@ -30,7 +30,11 @@
                         Margin="0,0,4,0" Background="Transparent" Foreground="#9aa0a6" BorderThickness="0" Cursor="Hand" />
             </Grid>
 
-            <ItemsControl x:Name="BarList" ItemsSource="{Binding Bars}" Margin="4">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="4">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource OverlayScrollBar}" />
+                </ScrollViewer.Resources>
+            <ItemsControl x:Name="BarList" ItemsSource="{Binding Bars}">
                 <ItemsControl.Resources>
                     <DropShadowEffect x:Key="TextShadow" ShadowDepth="1" BlurRadius="3" Direction="315"
                                       Color="#000000" Opacity="1" />
@@ -63,6 +67,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </ScrollViewer>
         </DockPanel>
     </Border>
 </Window>

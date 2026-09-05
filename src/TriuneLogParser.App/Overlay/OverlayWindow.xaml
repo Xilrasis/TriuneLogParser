@@ -70,8 +70,12 @@
                 </StackPanel>
             </Border>
 
-            <!-- bars -->
-            <ItemsControl x:Name="BarList" ItemsSource="{Binding Bars}" Margin="4">
+            <!-- bars (scroll when there are more than fit) -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="4">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource OverlayScrollBar}" />
+                </ScrollViewer.Resources>
+            <ItemsControl x:Name="BarList" ItemsSource="{Binding Bars}">
                 <ItemsControl.Resources>
                     <DropShadowEffect x:Key="TextShadow" ShadowDepth="1" BlurRadius="3" Direction="315"
                                       Color="#000000" Opacity="1" />
@@ -106,6 +110,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </ScrollViewer>
         </DockPanel>
     </Border>
 </Window>
