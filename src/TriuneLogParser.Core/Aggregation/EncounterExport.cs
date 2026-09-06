@@ -35,7 +35,15 @@ public static class EncounterExport
                 m.Deaths,
                 m.LastKiller,
                 timeToKillSeconds = m.TimeToKillSeconds,
-                byFighter = m.ByFighter.Select(x => new { x.Fighter, x.Damage }),
+                byFighter = m.ByFighter.Select(x => new
+                {
+                    x.Fighter,
+                    x.Damage,
+                    sources = x.Sources.Select(b => new
+                    {
+                        b.Category, b.Name, b.PetName, b.Total, b.Hits, b.Crits, b.Max, average = b.Average,
+                    }),
+                }),
             }),
         };
 

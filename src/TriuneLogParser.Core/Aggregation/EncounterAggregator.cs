@@ -25,14 +25,16 @@ public static class EncounterAggregator
         long totalDamage = 0, totalHealing = 0;
         DateTime start = DateTime.MaxValue, end = DateTime.MinValue;
         var mobs = new Dictionary<string, MobStats>(StringComparer.OrdinalIgnoreCase);
-        var mobByFighter = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+        // mob -> fighter -> that fighter's source buckets into this mob
+        var mobFighterSources =
+            new Dictionary<string, Dictionary<string, List<SourceBucket>>>(StringComparer.OrdinalIgnoreCase);
 
         MobStats Mob(string name)
         {
             if (!mobs.TryGetValue(name, out MobStats? m))
             {
                 mobs[name] = m = new MobStats { Name = name };
-                mobByFighter[name] = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                mobFighterSources[name] = new Dictionary<string, List<SourceBucket>>(StringComparer.OrdinalIgnoreCase);
             }
 
             return m;
@@ -50,7 +52,7 @@ public static class EncounterAggregator
                 {
                     case CombatAction.Damage:
                         totalDamage += ApplyDamage(e, Get);
-                        TrackMobDamage(e, Mob, mobByFighter);
+                        TrackMobDamage(e, Mob, mobFighterSources);
                         break;
                     case CombatAction.Miss:
                         ApplyMiss(e, Get);
@@ -76,10 +78,19 @@ public static class EncounterAggregator
 
         foreach ((string name, MobStats m) in mobs)
         {
-            m.ByFighter.AddRange(mobByFighter[name]
-                .Where(kv => kv.Value > 0)
-                .OrderByDescending(kv => kv.Value)
-                .Select(kv => (kv.Key, kv.Value)));
+            foreach ((string fighter, List<SourceBucket> srcs) in mobFighterSources[name])
+            {
+                long dmg = srcs.Sum(b => b.Total);
+                if (dmg <= 0)
+                    continue;
+
+                Sort(srcs);
+                var mfd = new MobFighterDamage { Fighter = fighter, Damage = dmg };
+                mfd.Sources.AddRange(srcs);
+                m.ByFighter.Add(mfd);
+            }
+
+            m.ByFighter.Sort((a, b) => b.Damage.CompareTo(a.Damage));
         }
 
         foreach (FighterStats f in fighters.Values)
@@ -111,7 +122,7 @@ public static class EncounterAggregator
     private static void TrackMobDamage(
         CombatEvent e,
         Func<string, MobStats> mob,
-        Dictionary<string, Dictionary<string, long>> mobByFighter)
+        Dictionary<string, Dictionary<string, List<SourceBucket>>> mobFighterSources)
     {
         if (e.TargetKind != EntityKind.Npc || e.Target is not { } target || e.Amount <= 0)
             return;
@@ -123,9 +134,12 @@ public static class EncounterAggregator
 
         if (e.Attacker is { } atk && e.AttackerKind is EntityKind.Player or EntityKind.Pet)
         {
-            string fighter = e.AttackerKind == EntityKind.Pet && e.AttackerOwner is { } owner ? owner : atk;
-            var byF = mobByFighter[target];
-            byF[fighter] = byF.GetValueOrDefault(fighter) + e.Amount;
+            (string fighter, string? petName) = ResolveFighter(atk, e);
+            Dictionary<string, List<SourceBucket>> perFighter = mobFighterSources[target];
+            if (!perFighter.TryGetValue(fighter, out List<SourceBucket>? srcs))
+                perFighter[fighter] = srcs = new List<SourceBucket>();
+
+            Bucket(srcs, Category(e.Mechanic), SourceName(e), petName).Add(e.Amount, e.IsCritical);
         }
     }
 

@@ -101,8 +101,17 @@ public sealed class MobStats
     public DateTime LastHit { get; set; } = DateTime.MinValue;
 
     /// <summary>Damage into this mob per attacking fighter (pets folded into owner), highest first.</summary>
-    public List<(string Fighter, long Damage)> ByFighter { get; } = new();
+    public List<MobFighterDamage> ByFighter { get; } = new();
 
     public double TimeToKillSeconds =>
         LastHit > FirstHit ? (LastHit - FirstHit).TotalSeconds : 0;
+}
+
+/// <summary>One fighter's damage into one mob, broken down by source the same way
+/// <see cref="FighterStats.DamageSources"/> is.</summary>
+public sealed class MobFighterDamage
+{
+    public required string Fighter { get; init; }
+    public long Damage { get; set; }
+    public List<SourceBucket> Sources { get; } = new();
 }

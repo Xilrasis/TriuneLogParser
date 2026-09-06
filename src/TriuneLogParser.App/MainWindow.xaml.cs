@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,12 +19,24 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _vm;
 
+        Title = $"TriuneLogParser {AppVersion()}";
+
         _vm.SelectionShouldFollow += FollowSelection;
         _vm.RequestSavePath = SuggestSavePath;
         _vm.RequestSettingsDialog = ShowSettingsDialog;
         Closed += (_, _) => { UnregisterSplitHotkey(); _vm.Dispose(); };
         Loaded += (_, _) => _vm.OnShellReady();
         SourceInitialized += (_, _) => RegisterSplitHotkey();
+    }
+
+    private static string AppVersion()
+    {
+        string? v = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (string.IsNullOrEmpty(v))
+            return Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "";
+        int plus = v.IndexOf('+');
+        return plus > 0 ? v[..plus] : v;
     }
 
     // ---- global "split fight" hotkey (Ctrl+Alt+S), works while the game has focus ----

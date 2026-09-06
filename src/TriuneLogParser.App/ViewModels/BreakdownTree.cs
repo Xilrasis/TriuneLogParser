@@ -102,7 +102,7 @@ public static class BreakdownTreeBuilder
                 BarFraction = topValue > 0 ? (double)fv / topValue : 0,
             };
 
-            foreach (BreakdownNode child in BuildChildren(Buckets(f), fv))
+            foreach (BreakdownNode child in BuildChildren(Buckets(f), fv, childDepth: 1))
                 fighter.Children.Add(child);
 
             nodes.Add(fighter);
@@ -136,18 +136,23 @@ public static class BreakdownTreeBuilder
                 BarFraction = top > 0 ? (double)m.DamageTaken / top : 0,
             };
 
-            foreach ((string fighter, long dmg) in m.ByFighter)
+            foreach (MobFighterDamage bf in m.ByFighter)
             {
-                node.Children.Add(new BreakdownNode
+                var fighterNode = new BreakdownNode
                 {
-                    Label = fighter,
+                    Label = bf.Fighter,
                     Depth = 1,
-                    Kind = "leaf",
-                    Value = dmg,
-                    ValueText = dmg.ToString("N0"),
-                    ShareText = m.DamageTaken > 0 ? ((double)dmg / m.DamageTaken).ToString("P0") : "",
-                    BarFraction = m.DamageTaken > 0 ? (double)dmg / m.DamageTaken : 0,
-                });
+                    Kind = "group",
+                    Value = bf.Damage,
+                    ValueText = bf.Damage.ToString("N0"),
+                    ShareText = m.DamageTaken > 0 ? ((double)bf.Damage / m.DamageTaken).ToString("P0") : "",
+                    BarFraction = m.DamageTaken > 0 ? (double)bf.Damage / m.DamageTaken : 0,
+                };
+
+                foreach (BreakdownNode child in BuildChildren(bf.Sources, bf.Damage, childDepth: 2))
+                    fighterNode.Children.Add(child);
+
+                node.Children.Add(fighterNode);
             }
 
             nodes.Add(node);
@@ -156,14 +161,17 @@ public static class BreakdownTreeBuilder
         return nodes;
     }
 
-    private static IEnumerable<BreakdownNode> BuildChildren(IReadOnlyList<SourceBucket> buckets, long fighterTotal)
+    /// <summary>
+    /// The source subtree under a total (a fighter, or a fighter's damage into one mob).
+    /// <paramref name="childDepth"/> is the tree depth of the group/leaf rows produced.
+    /// </summary>
+    private static IEnumerable<BreakdownNode> BuildChildren(
+        IReadOnlyList<SourceBucket> buckets, long parentTotal, int childDepth)
     {
         // Split into: this fighter's own buckets vs. each pet's buckets.
         var own = buckets.Where(b => b.PetName is null).ToList();
         var byPet = buckets.Where(b => b.PetName is not null)
             .GroupBy(b => b.PetName!, StringComparer.OrdinalIgnoreCase);
-
-        var groups = new List<(string label, string kindTag, List<SourceBucket> items)>();
 
         // Melee (white + specials) collapse into one expandable group.
         var melee = own.Where(IsMelee).ToList();
@@ -172,10 +180,10 @@ public static class BreakdownTreeBuilder
         var result = new List<BreakdownNode>();
 
         if (melee.Count > 0)
-            result.Add(GroupNode("Melee", melee, fighterTotal, depth: 1));
+            result.Add(GroupNode("Melee", melee, parentTotal, depth: childDepth));
 
         foreach (SourceBucket b in nonMelee.OrderByDescending(b => b.Total))
-            result.Add(LeafNode(b.Name, b.Category, b, fighterTotal, depth: 1));
+            result.Add(LeafNode(b.Name, b.Category, b, parentTotal, depth: childDepth));
 
         foreach (var pet in byPet)
         {
@@ -185,21 +193,21 @@ public static class BreakdownTreeBuilder
             {
                 Label = StripOwnerPrefix(pet.Key),
                 Sub = "pet",
-                Depth = 1,
+                Depth = childDepth,
                 Kind = "group",
                 Value = petTotal,
                 ValueText = petTotal.ToString("N0"),
-                ShareText = fighterTotal > 0 ? ((double)petTotal / fighterTotal).ToString("P0") : "",
+                ShareText = parentTotal > 0 ? ((double)petTotal / parentTotal).ToString("P0") : "",
                 DetailText = $"{items.Sum(b => b.Hits):N0} hits",
-                BarFraction = fighterTotal > 0 ? (double)petTotal / fighterTotal : 0,
+                BarFraction = parentTotal > 0 ? (double)petTotal / parentTotal : 0,
             };
 
             var petMelee = items.Where(IsMelee).ToList();
             var petOther = items.Where(b => !IsMelee(b)).ToList();
             if (petMelee.Count > 0)
-                petNode.Children.Add(GroupNode("Melee", petMelee, petTotal, depth: 2));
+                petNode.Children.Add(GroupNode("Melee", petMelee, petTotal, depth: childDepth + 1));
             foreach (SourceBucket b in petOther.OrderByDescending(b => b.Total))
-                petNode.Children.Add(LeafNode(b.Name, b.Category, b, petTotal, depth: 2));
+                petNode.Children.Add(LeafNode(b.Name, b.Category, b, petTotal, depth: childDepth + 1));
 
             result.Add(petNode);
         }

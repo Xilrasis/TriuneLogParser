@@ -12,6 +12,10 @@ feature-scoped; newest first. Format loosely follows
   Total / Rate) with thin drag handles between the columns, Excel-style. Columns stay
   proportional and rescale with the window by default; a drag changes the ratio and
   persists it. The handles hide when the overlay is locked.
+- The Mobs view is now a full tree: expand a mob to see the players that damaged it,
+  then expand a player for their per-source breakdown — the same melee-collapse /
+  pet-fold / skill-attack layout as Damage Done.
+- The app version is shown in the main window title bar.
 
 ### Fixed
 - Overlay tooltips were light text on the OS default light background — unreadable.

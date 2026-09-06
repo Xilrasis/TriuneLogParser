@@ -41,6 +41,28 @@ public class Phase4Tests
     }
 
     [Fact]
+    public void Mob_by_fighter_is_broken_down_by_source()
+    {
+        var enc = Build(new[]
+        {
+            L("12:00:00", "You crush a doomfire soldier for 100 points of damage."),
+            L("12:00:02", "You kick a doomfire soldier for 40 points of damage."),
+            L("12:00:04", "You hit a doomfire soldier for 200 points of non-melee damage. (Distant Strike)"),
+            L("12:00:06", "You have slain a doomfire soldier!"),
+        }, out _);
+
+        EncounterReport r = EncounterAggregator.Report(enc);
+        MobFighterDamage me = Assert.Single(r.Mobs[0].ByFighter);
+
+        Assert.Equal("Xilaria", me.Fighter);
+        Assert.Equal(340, me.Damage);
+        Assert.Equal(340, me.Sources.Sum(s => s.Total));
+        Assert.Equal("Distant Strike", me.Sources[0].Name);          // sorted, biggest first
+        Assert.Contains(me.Sources, s => s.Name == "crush" && s.Total == 100);
+        Assert.Contains(me.Sources, s => s.Name == "kick" && s.Total == 40);
+    }
+
+    [Fact]
     public void Csv_export_has_rows_and_a_mob_section()
     {
         var enc = Build(new[]
