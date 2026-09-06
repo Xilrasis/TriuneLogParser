@@ -220,14 +220,16 @@ public static class BreakdownTreeBuilder
                 typeNode.Children.Add(AvoidLeaf("landed", a.Hits, a.Swings, a.HitRate,
                     a.Hits > 0 ? $"avg {a.Average:N0} · min {a.MinHit:N0} · max {a.Max:N0}"
                         + (a.Crits > 0 ? $" · crit {a.CritRate:P0} ({a.Crits:N0})" : "" ) : ""));
-                typeNode.Children.Add(AvoidLeaf("missed", a.Misses, a.Swings, a.MissRate, ""));
-                if (a.IsMelee)
-                {
+                if (a.Misses > 0)
+                    typeNode.Children.Add(AvoidLeaf("missed", a.Misses, a.Swings, a.MissRate, ""));
+                if (a.Parries > 0)
                     typeNode.Children.Add(AvoidLeaf("parried", a.Parries, a.Swings, a.ParryRate, ""));
+                if (a.Dodges > 0)
                     typeNode.Children.Add(AvoidLeaf("dodged", a.Dodges, a.Swings, a.DodgeRate, ""));
+                if (a.Blocks > 0)
                     typeNode.Children.Add(AvoidLeaf("blocked", a.Blocks, a.Swings, a.BlockRate, ""));
+                if (a.Ripostes > 0)
                     typeNode.Children.Add(AvoidLeaf("riposted", a.Ripostes, a.Swings, a.RiposteRate, ""));
-                }
                 if (a.Absorbs > 0)
                     typeNode.Children.Add(AvoidLeaf("rune / absorb", a.Absorbs, a.Swings,
                         a.Swings > 0 ? (double)a.Absorbs / a.Swings : 0, "mitigation amount not in the log"));
