@@ -145,6 +145,9 @@
                                           IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Healing}" />
                             <ToggleButton Content="Mobs" Click="Metric_Click" Tag="Mobs" Margin="6,0,0,0"
                                           IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Mobs}" />
+                            <ToggleButton Content="Defenses" Click="Metric_Click" Tag="Defenses" Margin="6,0,0,0"
+                                          ToolTip="Per-defender incoming-attack breakdown: min/avg/max hit and miss / parry / dodge / block / riposte rates by attack type."
+                                          IsChecked="{Binding Metric, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Defenses}" />
                         </StackPanel>
                     </DockPanel>
 

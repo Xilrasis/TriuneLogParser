@@ -18,6 +18,9 @@ running the RoF2 client whose log wording is different enough that mainstream pa
   kick, punch, backstab, strike…), direct non-melee (nukes), damage-over-time,
   procs, and damage shields — kept as separate buckets, not one lump number.
 - **Damage taken, healing, deaths** tracked alongside damage done.
+- **Defenses view.** Per defender, incoming attacks broken out by type with min/avg/max
+  hit and miss / parry / dodge / block / riposte / rune rates — how well each tank (or
+  anyone) is avoiding.
 - **Pet attribution.** Pet output is credited to its owner (detected from Triune's
   `Name (Owner: X)` log tags) as a labelled sub-group; unowned pets stay separate.
 - **Encounter splitting.** EQLogParser-style fight detection that groups multi-mob
