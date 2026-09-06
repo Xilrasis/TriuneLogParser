@@ -189,6 +189,23 @@ static void PrintEncounterTable(EncounterReport r, Encounter enc, int top)
             Console.WriteLine($"   {Trunc(f.Name, 18),-18} {f.DamageTaken,12:N0}");
     }
 
+    if (r.Defenses.Count > 0)
+    {
+        Console.WriteLine($"   {"Defender / attack",-26} {"Swings",8} {"Hit%",6} {"Avg",9} {"Max",9}  avoidance");
+        foreach (DefenseStats d in r.Defenses.Take(8))
+        {
+            Console.WriteLine($"   {Trunc(d.Name, 26),-26} {d.Swings,8:N0} {d.HitRate,6:P0} {"",9} {d.Max,9:N0}  "
+                + $"avoided {d.AvoidRate:P0} (miss {d.Misses}, parry {d.Parries}, dodge {d.Dodges}, block {d.Blocks}, riposte {d.Ripostes})");
+            foreach (IncomingAttackStats a in d.Attacks.Take(top))
+            {
+                string av = a.IsMelee
+                    ? $"m{a.Misses} p{a.Parries} d{a.Dodges} b{a.Blocks} r{a.Ripostes}"
+                    : "-";
+                Console.WriteLine($"      {Trunc(a.Type, 23),-23} {a.Swings,8:N0} {a.HitRate,6:P0} {a.Average,9:N0} {a.Max,9:N0}  {av}");
+            }
+        }
+    }
+
     if (r.Mobs.Count > 0)
     {
         Console.WriteLine($"   {"Mob",-26} {"Damage",12} {"TTK",7}  killed by");

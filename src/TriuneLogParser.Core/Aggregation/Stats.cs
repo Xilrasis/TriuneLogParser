@@ -62,6 +62,107 @@ public sealed class FighterStats
     public double HpsOver(double seconds) => seconds > 0 ? HealingDone / seconds : 0;
 }
 
+/// <summary>
+/// One incoming attack type against a defender — a melee verb ("crush", "bash") or a
+/// non-melee source ("non-melee", or "non-melee: &lt;spell&gt;") — and how the defender's
+/// rolls against it resolved. Avoidance (parry / dodge / block / riposte) only happens on
+/// melee; non-melee rows only ever carry landed hits.
+/// </summary>
+public sealed class IncomingAttackStats
+{
+    public required string Type { get; init; }
+    public required string Category { get; init; }   // "Melee", "Melee Special", "Non-melee", "Damage Shield"
+
+    public long Hits { get; set; }
+    public long Misses { get; set; }
+    public long Parries { get; set; }
+    public long Dodges { get; set; }
+    public long Blocks { get; set; }
+    public long Ripostes { get; set; }
+    public long Absorbs { get; set; }          // rune / "magical skin absorbs the blow"
+    public long Invulnerables { get; set; }    // "but <you> are INVULNERABLE!"
+
+    public long Damage { get; set; }
+    public long Crits { get; set; }
+    public long Min { get; set; } = long.MaxValue;
+    public long Max { get; set; }
+
+    /// <summary>True for anything that can be actively avoided (melee); non-melee can only land or be resisted.</summary>
+    public bool IsMelee => Category is "Melee" or "Melee Special";
+
+    /// <summary>Every swing the attacker took at the defender with this attack type.</summary>
+    public long Swings => Hits + Misses + Parries + Dodges + Blocks + Ripostes + Absorbs + Invulnerables;
+    public long Avoided => Swings - Hits;
+
+    public double Average => Hits > 0 ? (double)Damage / Hits : 0;
+    public long MinHit => Hits > 0 && Min != long.MaxValue ? Min : 0;
+
+    /// <summary>Attacker's accuracy against this defender for this attack type.</summary>
+    public double HitRate => Swings > 0 ? (double)Hits / Swings : 0;
+    public double AvoidRate => Swings > 0 ? (double)Avoided / Swings : 0;
+    public double CritRate => Hits > 0 ? (double)Crits / Hits : 0;
+
+    public double MissRate => Swings > 0 ? (double)Misses / Swings : 0;
+    public double ParryRate => Swings > 0 ? (double)Parries / Swings : 0;
+    public double DodgeRate => Swings > 0 ? (double)Dodges / Swings : 0;
+    public double BlockRate => Swings > 0 ? (double)Blocks / Swings : 0;
+    public double RiposteRate => Swings > 0 ? (double)Ripostes / Swings : 0;
+
+    public void AddHit(long amount, bool crit)
+    {
+        Hits++;
+        Damage += amount;
+        if (crit) Crits++;
+        if (amount < Min) Min = amount;
+        if (amount > Max) Max = amount;
+    }
+
+    public void AddAvoid(string? reason)
+    {
+        switch (reason)
+        {
+            case "parry": Parries++; break;
+            case "dodge": Dodges++; break;
+            case "block": Blocks++; break;
+            case "riposte": Ripostes++; break;
+            case "rune": Absorbs++; break;
+            case "invulnerable": Invulnerables++; break;
+            default: Misses++; break;
+        }
+    }
+}
+
+/// <summary>How one defender fared against incoming attacks across the reported encounters.</summary>
+public sealed class DefenseStats
+{
+    public required string Name { get; init; }
+    public int Deaths { get; set; }
+
+    /// <summary>Per incoming attack type, biggest damage first.</summary>
+    public List<IncomingAttackStats> Attacks { get; } = new();
+
+    public long Swings => Attacks.Sum(a => a.Swings);
+    public long Hits => Attacks.Sum(a => a.Hits);
+    public long Damage => Attacks.Sum(a => a.Damage);
+    public long Crits => Attacks.Sum(a => a.Crits);
+
+    public long Misses => Attacks.Sum(a => a.Misses);
+    public long Parries => Attacks.Sum(a => a.Parries);
+    public long Dodges => Attacks.Sum(a => a.Dodges);
+    public long Blocks => Attacks.Sum(a => a.Blocks);
+    public long Ripostes => Attacks.Sum(a => a.Ripostes);
+    public long Absorbs => Attacks.Sum(a => a.Absorbs);
+
+    /// <summary>Melee swings only — the denominator for a meaningful avoidance rate.</summary>
+    public long MeleeSwings => Attacks.Where(a => a.IsMelee).Sum(a => a.Swings);
+    public long MeleeHits => Attacks.Where(a => a.IsMelee).Sum(a => a.Hits);
+    public long MeleeAvoided => MeleeSwings - MeleeHits;
+
+    public double AvoidRate => MeleeSwings > 0 ? (double)MeleeAvoided / MeleeSwings : 0;
+    public double HitRate => MeleeSwings > 0 ? (double)MeleeHits / MeleeSwings : 0;
+    public long Max => Attacks.Count > 0 ? Attacks.Max(a => a.Max) : 0;
+}
+
 /// <summary>The full breakdown for a set of encounters.</summary>
 public sealed class EncounterReport
 {
@@ -88,6 +189,9 @@ public sealed class EncounterReport
 
     /// <summary>Per-target-NPC breakdown ("who killed what"), highest damage first.</summary>
     public IReadOnlyList<MobStats> Mobs { get; init; } = Array.Empty<MobStats>();
+
+    /// <summary>Per-defender incoming-attack / avoidance breakdown, most-attacked first.</summary>
+    public IReadOnlyList<DefenseStats> Defenses { get; init; } = Array.Empty<DefenseStats>();
 }
 
 /// <summary>Damage dealt to one NPC across the reported encounters.</summary>

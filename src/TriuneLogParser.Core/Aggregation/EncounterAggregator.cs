@@ -28,6 +28,8 @@ public static class EncounterAggregator
         // mob -> fighter -> that fighter's source buckets into this mob
         var mobFighterSources =
             new Dictionary<string, Dictionary<string, List<SourceBucket>>>(StringComparer.OrdinalIgnoreCase);
+        // defender -> incoming attack type -> how the defender's rolls resolved
+        var defense = new Dictionary<string, Dictionary<string, IncomingAttackStats>>(StringComparer.OrdinalIgnoreCase);
 
         MobStats Mob(string name)
         {
@@ -53,9 +55,11 @@ public static class EncounterAggregator
                     case CombatAction.Damage:
                         totalDamage += ApplyDamage(e, Get);
                         TrackMobDamage(e, Mob, mobFighterSources);
+                        TrackDefense(e, defense);
                         break;
                     case CombatAction.Miss:
                         ApplyMiss(e, Get);
+                        TrackDefense(e, defense);
                         break;
                     case CombatAction.Heal:
                         totalHealing += ApplyHeal(e, Get);
@@ -100,6 +104,26 @@ public static class EncounterAggregator
             Sort(f.HealingSources);
         }
 
+        var defenses = new List<DefenseStats>();
+        foreach ((string name, Dictionary<string, IncomingAttackStats> byType) in defense)
+        {
+            var d = new DefenseStats { Name = name };
+            d.Attacks.AddRange(byType.Values
+                .Where(a => a.Swings > 0)
+                .OrderByDescending(a => a.Swings)
+                .ThenByDescending(a => a.Damage));
+            if (d.Attacks.Count == 0)
+                continue;
+            if (fighters.TryGetValue(name, out FighterStats? fs))
+                d.Deaths = fs.Deaths;
+            defenses.Add(d);
+        }
+        defenses.Sort((a, b) =>
+        {
+            int c = b.Swings.CompareTo(a.Swings);
+            return c != 0 ? c : b.Damage.CompareTo(a.Damage);
+        });
+
         List<FighterStats> Rank(Func<FighterStats, long> key) =>
             fighters.Values.Where(f => key(f) > 0).OrderByDescending(key).ToList();
 
@@ -116,7 +140,41 @@ public static class EncounterAggregator
             Healing = Rank(f => f.HealingDone),
             Titles = list.Select(e => e.Title).ToArray(),
             Mobs = mobs.Values.Where(m => m.DamageTaken > 0).OrderByDescending(m => m.DamageTaken).ToList(),
+            Defenses = defenses,
         };
+    }
+
+    /// <summary>
+    /// Record one incoming attack (a landed hit or an avoided swing) against the defender,
+    /// bucketed by attack type, for the Defenses view. NPC (or attacker-less) → friendly only.
+    /// </summary>
+    private static void TrackDefense(CombatEvent e, Dictionary<string, Dictionary<string, IncomingAttackStats>> defense)
+    {
+        if (e.Target is not { } tgt || e.TargetKind is not (EntityKind.Player or EntityKind.Pet))
+            return;
+        if (e.AttackerKind is EntityKind.Player or EntityKind.Pet)
+            return; // friendly-on-friendly (rare) — not a defense event
+
+        // Damage shields aren't something the defender rolls against.
+        if (e.Mechanic == DamageMechanic.DamageShield)
+            return;
+
+        (string defender, _) = ResolveFighter(tgt, e, useOwnerOfTarget: true);
+
+        string category = Category(e.Mechanic);
+        string type = e.Mechanic == DamageMechanic.NonMelee
+            ? (e.SpellName is { Length: > 0 } sp ? $"non-melee: {sp}" : "non-melee")
+            : (e.Verb ?? "hit");
+
+        if (!defense.TryGetValue(defender, out Dictionary<string, IncomingAttackStats>? byType))
+            defense[defender] = byType = new Dictionary<string, IncomingAttackStats>(StringComparer.OrdinalIgnoreCase);
+        if (!byType.TryGetValue(type, out IncomingAttackStats? a))
+            byType[type] = a = new IncomingAttackStats { Type = type, Category = category };
+
+        if (e.Action == CombatAction.Miss)
+            a.AddAvoid(e.MissReason);
+        else if (e.Amount > 0)
+            a.AddHit(e.Amount, e.IsCritical);
     }
 
     private static void TrackMobDamage(

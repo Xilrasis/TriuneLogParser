@@ -45,6 +45,22 @@ public static class EncounterExport
                     }),
                 }),
             }),
+            defenses = r.Defenses.Select(d => new
+            {
+                d.Name,
+                d.Deaths,
+                d.Swings,
+                d.Hits,
+                d.Damage,
+                avoidRate = d.AvoidRate,
+                d.Misses, d.Parries, d.Dodges, d.Blocks, d.Ripostes, d.Absorbs,
+                attacks = d.Attacks.Select(a => new
+                {
+                    a.Type, a.Category, a.Swings, a.Hits, a.Damage,
+                    min = a.MinHit, a.Max, average = a.Average, a.Crits,
+                    a.Misses, a.Parries, a.Dodges, a.Blocks, a.Ripostes, a.Absorbs, a.Invulnerables,
+                }),
+            }),
         };
 
         return JsonSerializer.Serialize(payload, JsonOpts);
@@ -90,6 +106,19 @@ public static class EncounterExport
         Rows("damage_done", r.DamageDone, f => f.DamageDone, f => f.DamageSources);
         Rows("damage_taken", r.DamageTaken, f => f.DamageTaken, f => f.DamageTakenSources);
         Rows("healing", r.Healing, f => f.HealingDone, f => f.HealingSources);
+
+        sb.AppendLine();
+        sb.AppendLine("defender,attack_type,category,swings,hits,damage,min,max,average,crits,miss,parry,dodge,block,riposte,rune");
+        foreach (DefenseStats d in r.Defenses)
+        {
+            foreach (IncomingAttackStats a in d.Attacks)
+            {
+                sb.AppendLine(string.Join(',',
+                    Csv(d.Name), Csv(a.Type), Csv(a.Category), a.Swings, a.Hits, a.Damage,
+                    a.MinHit, a.Max, a.Average.ToString("0.##", Inv), a.Crits,
+                    a.Misses, a.Parries, a.Dodges, a.Blocks, a.Ripostes, a.Absorbs));
+            }
+        }
 
         sb.AppendLine();
         sb.AppendLine("mob,damage_taken,deaths,last_killer,time_to_kill_seconds");

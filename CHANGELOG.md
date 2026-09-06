@@ -8,6 +8,12 @@ feature-scoped; newest first. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Defenses view.** A new breakdown mode next to Damage Done / Taken / Healing / Mobs.
+  For each defender it lists incoming attacks by type (melee verb, or `non-melee:
+  <spell>`) with min / average / max hit, attacker hit-rate, and miss / parry / dodge /
+  block / riposte / rune counts and rates — expand a type row for the full split. Works
+  for the whole group, not just the logging character. Also in the CSV/JSON export and
+  the `triuneparse --table` output.
 - **Resizable overlay columns.** Both overlays now have a column header row (Name /
   Total / Rate) with thin drag handles between the columns, Excel-style. Columns stay
   proportional and rescale with the window by default; a drag changes the ratio and

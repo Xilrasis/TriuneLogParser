@@ -493,6 +493,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             Metric.DamageDone => "Damage done",
             Metric.DamageTaken => "Damage taken",
             Metric.Healing => "Healing",
+            Metric.Defenses => "Defenses",
             _ => "Mobs",
         };
         string span = _selectedIds.Count > 1 ? $"{_selectedIds.Count} encounters" : "encounter";

@@ -3,7 +3,7 @@ using TriuneLogParser.Core.Aggregation;
 
 namespace TriuneLogParser.App.ViewModels;
 
-public enum Metric { DamageDone, DamageTaken, Healing, Mobs }
+public enum Metric { DamageDone, DamageTaken, Healing, Mobs, Defenses }
 
 /// <summary>
 /// One row in the damage-meter breakdown. Rows form a tree (fighter → group → leaf);
@@ -52,6 +52,9 @@ public static class BreakdownTreeBuilder
     {
         if (metric == Metric.Mobs)
             return BuildMobs(report);
+
+        if (metric == Metric.Defenses)
+            return BuildDefenses(report, seconds, classLabel);
 
         IReadOnlyList<FighterStats> fighters = metric switch
         {
@@ -159,6 +162,110 @@ public static class BreakdownTreeBuilder
         }
 
         return nodes;
+    }
+
+    /// <summary>
+    /// Per-defender incoming-attack / avoidance breakdown. Top row = defender (total damage
+    /// taken, overall avoid rate); children = one row per incoming attack type with its
+    /// min/avg/max hit and per-type miss / parry / dodge / block / riposte rates.
+    /// </summary>
+    private static List<BreakdownNode> BuildDefenses(
+        EncounterReport report, double seconds, Func<string, string>? classLabel)
+    {
+        long top = report.Defenses.Count > 0 ? report.Defenses[0].Damage : 0;
+        var nodes = new List<BreakdownNode>();
+
+        foreach (DefenseStats d in report.Defenses)
+        {
+            string classes = classLabel?.Invoke(d.Name) ?? "";
+            string avoidBits = AvoidBits(d.Misses, d.Parries, d.Dodges, d.Blocks, d.Ripostes, d.Absorbs);
+            string deaths = d.Deaths > 0 ? $" · {d.Deaths} death(s)" : "";
+            string nm = d.Swings > d.MeleeSwings ? $" · +{d.Swings - d.MeleeSwings:N0} non-melee hits" : "";
+
+            var node = new BreakdownNode
+            {
+                Label = d.Name,
+                Sub = classes,
+                Depth = 0,
+                Kind = "top",
+                Value = d.Damage,
+                ValueText = d.Damage.ToString("N0"),
+                ShareText = d.MeleeSwings > 0 ? $"{d.AvoidRate:P0} av" : "",
+                RateText = seconds > 0 ? $"{d.Damage / seconds:N0}/s" : "",
+                DetailText = $"{d.MeleeSwings:N0} melee swings · {d.HitRate:P0} landed"
+                             + (avoidBits.Length > 0 ? $" · {avoidBits}" : "") + nm + deaths,
+                BarFraction = top > 0 ? (double)d.Damage / top : 0,
+            };
+
+            long typeTop = d.Attacks.Count > 0 ? d.Attacks.Max(a => a.Swings) : 0;
+            foreach (IncomingAttackStats a in d.Attacks)
+            {
+                var typeNode = new BreakdownNode
+                {
+                    Label = a.Type,
+                    Sub = a.Category,
+                    Depth = 1,
+                    Kind = "group",
+                    Value = a.Damage,
+                    ValueText = $"{a.Swings:N0} sw",
+                    ShareText = $"{a.HitRate:P0} hit",
+                    RateText = a.IsMelee ? $"{a.AvoidRate:P0} av" : "",
+                    DetailText = a.Hits > 0
+                        ? $"avg {a.Average:N0} · min {a.MinHit:N0} · max {a.Max:N0}"
+                          + (a.Crits > 0 ? $" · crit {a.CritRate:P0}" : "")
+                        : "no hits landed",
+                    BarFraction = typeTop > 0 ? (double)a.Swings / typeTop : 0,
+                };
+
+                typeNode.Children.Add(AvoidLeaf("landed", a.Hits, a.Swings, a.HitRate,
+                    a.Hits > 0 ? $"avg {a.Average:N0} · min {a.MinHit:N0} · max {a.Max:N0}"
+                        + (a.Crits > 0 ? $" · crit {a.CritRate:P0} ({a.Crits:N0})" : "" ) : ""));
+                typeNode.Children.Add(AvoidLeaf("missed", a.Misses, a.Swings, a.MissRate, ""));
+                if (a.IsMelee)
+                {
+                    typeNode.Children.Add(AvoidLeaf("parried", a.Parries, a.Swings, a.ParryRate, ""));
+                    typeNode.Children.Add(AvoidLeaf("dodged", a.Dodges, a.Swings, a.DodgeRate, ""));
+                    typeNode.Children.Add(AvoidLeaf("blocked", a.Blocks, a.Swings, a.BlockRate, ""));
+                    typeNode.Children.Add(AvoidLeaf("riposted", a.Ripostes, a.Swings, a.RiposteRate, ""));
+                }
+                if (a.Absorbs > 0)
+                    typeNode.Children.Add(AvoidLeaf("rune / absorb", a.Absorbs, a.Swings,
+                        a.Swings > 0 ? (double)a.Absorbs / a.Swings : 0, "mitigation amount not in the log"));
+                if (a.Invulnerables > 0)
+                    typeNode.Children.Add(AvoidLeaf("invulnerable", a.Invulnerables, a.Swings,
+                        a.Swings > 0 ? (double)a.Invulnerables / a.Swings : 0, ""));
+
+                node.Children.Add(typeNode);
+            }
+
+            nodes.Add(node);
+        }
+
+        return nodes;
+    }
+
+    private static BreakdownNode AvoidLeaf(string label, long count, long swings, double rate, string detail) => new()
+    {
+        Label = label,
+        Depth = 2,
+        Kind = "leaf",
+        Value = count,
+        ValueText = count.ToString("N0"),
+        ShareText = swings > 0 ? rate.ToString("P0") : "",
+        DetailText = detail,
+        BarFraction = rate,
+    };
+
+    private static string AvoidBits(long miss, long parry, long dodge, long block, long riposte, long absorb)
+    {
+        var parts = new List<string>(6);
+        if (miss > 0) parts.Add($"miss {miss:N0}");
+        if (parry > 0) parts.Add($"parry {parry:N0}");
+        if (dodge > 0) parts.Add($"dodge {dodge:N0}");
+        if (block > 0) parts.Add($"block {block:N0}");
+        if (riposte > 0) parts.Add($"riposte {riposte:N0}");
+        if (absorb > 0) parts.Add($"rune {absorb:N0}");
+        return string.Join(" · ", parts);
     }
 
     /// <summary>

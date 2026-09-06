@@ -148,6 +148,15 @@ for now these are grouped under **Non-melee** by spell name.
 | `<attacker> tries to <verb> <target>, but <reason>!` | miss |
 | `<attacker> <verb> YOU for <amount> points of damage. [(<proc>)]` | incoming |
 
+**Incoming avoidance.** `<mob> tries to <verb> YOU, but <reason>!` — `misses` /
+`YOU parry` / `YOU dodge` / `YOU block` / `YOU riposte` / `YOUR magical skin absorbs
+the blow` (rune) / `<name> is INVULNERABLE`. These parse to `CombatAction.Miss` with
+`MissReason` set and the attempted `Verb` kept, and feed the **Defenses** view: per
+defender, per attack type (the verb, or `non-melee: <spell>` for incoming nukes),
+counts of hit / miss / parry / dodge / block / riposte / rune plus min / avg / max on
+landed hits. Non-melee has no avoidance roll, so those rows carry landed hits only. A
+rune's absorbed amount is not in the log, so it's counted but not valued.
+
 **Verb classification** ([`Verbs`](../src/TriuneLogParser.Core/Parsing/Verbs.cs)):
 `kick`, `punch`, `bash`, `backstab`, `frenzy` and any multi-word skill →
 **Melee Special**; `hit`, `crush`, `slash`, `pierce`, `strike`, `bite`, `claw`,
