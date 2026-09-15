@@ -36,7 +36,7 @@ public sealed class AppSettings
 
     /// <summary>
     /// How far back to parse when monitoring starts: 0 (active only), 30, 60, 120, 360
-    /// or 1440 minutes.
+    /// or 1440 minutes, or negative for the entire log file.
     /// </summary>
     public int RetroParseMinutes { get; set; } = 30;
 

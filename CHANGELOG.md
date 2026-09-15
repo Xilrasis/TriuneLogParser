@@ -8,6 +8,9 @@ feature-scoped; newest first. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **"All history" retro-parse option.** Settings → "On start, parse the log back" now
+  offers "All history (entire log file)" alongside the fixed windows, for when you want
+  the full log re-parsed instead of a time-bounded slice.
 - **Defenses view.** A new breakdown mode next to Damage Done / Taken / Healing / Mobs.
   For each defender it lists incoming attacks by type (melee verb, or `non-melee:
   <spell>`) with min / average / max hit, attacker hit-rate, and miss / parry / dodge /
