@@ -44,7 +44,7 @@ public sealed class LiveLogService : IDisposable
     /// <summary>Where unparsed damage-like lines are being logged.</summary>
     public string UnparsedLogPath => _unparsed.Path;
 
-    /// <summary>How far back to parse on start; 0 = only lines appended after start.</summary>
+    /// <summary>How far back to parse on start; 0 = only lines appended after start, negative = the whole file.</summary>
     public int RetroParseMinutes { get; set; } = 30;
 
     /// <summary>Set by <see cref="Start"/> for one run to override <see cref="RetroParseMinutes"/>.</summary>
@@ -116,16 +116,17 @@ public sealed class LiveLogService : IDisposable
             int retro;
             lock (_gate)
                 retro = _retroOverride ?? RetroParseMinutes;
-            if (retro <= 0)
+            if (retro == 0)
             {
                 // Active log only.
                 tailer.SeekToEnd();
             }
             else
             {
-                // Bulk-load, but skip lines older than the retro window.
-                DateTime cutoff = DateTime.Now.AddMinutes(-retro);
-                bool inWindow = false;
+                // Bulk-load. A negative retro means "all history" — no cutoff, read from
+                // the start of the file; otherwise skip lines older than the retro window.
+                DateTime cutoff = retro > 0 ? DateTime.Now.AddMinutes(-retro) : DateTime.MinValue;
+                bool inWindow = retro < 0;
                 foreach (string line in tailer.ReadNewLines())
                 {
                     if (ct.IsCancellationRequested || Volatile.Read(ref _generation) != generation)

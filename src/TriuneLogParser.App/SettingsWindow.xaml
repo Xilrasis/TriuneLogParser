@@ -49,7 +49,10 @@
                 <ComboBoxItem Tag="120" Content="2 hours" />
                 <ComboBoxItem Tag="360" Content="6 hours" />
                 <ComboBoxItem Tag="1440" Content="24 hours" />
+                <ComboBoxItem Tag="-1" Content="All history (entire log file)" />
             </ComboBox>
+            <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Text="On a large log file this can take a while and use significantly more memory." />
         </StackPanel>
 
         <!-- log split -->
