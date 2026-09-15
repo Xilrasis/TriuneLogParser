@@ -7,6 +7,8 @@ feature-scoped; newest first. Format loosely follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-15
+
 ### Added
 - **"All history" retro-parse option.** Settings → "On start, parse the log back" now
   offers "All history (entire log file)" alongside the fixed windows, for when you want
